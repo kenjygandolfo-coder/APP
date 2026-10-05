@@ -1,0 +1,24 @@
+{
+  "project_type": "Monorepo: Expo/React Native root app (Module 1 energy domain on main) + Vite + React 18 + Tailwind web module at apps/macros-web. This data layer (Module 3 per the user / Module 4 in branch sequence) is built INSIDE apps/macros-web, a real DOM React app where @supabase/supabase-js and @tanstack/react-query work normally. The Expo root app is NOT touched.",
+  "language": "TypeScript (strict; `any` additionally forbidden by the user)",
+  "build_system": "Web module: Vite (build/dev), Vitest (unit/integration), Playwright (E2E). npm (package-lock.json present).",
+  "test_framework": "Vitest + @testing-library/react (renderHook for hooks) + jsdom. Coverage via @vitest/coverage-v8 with 80% thresholds enforced in vitest.config.ts.",
+  "build_command": "cd apps/macros-web && npm run build",
+  "test_command": "cd apps/macros-web && npm run test -- --run",
+  "verification_instructions": "In apps/macros-web: npm install (adds @supabase/supabase-js + @tanstack/react-query), then npm run typecheck (tsc --noEmit strict), npm run lint (eslint, no-console=error), npm run test -- --run (Vitest, 80% coverage), npm run build (tsc + vite build). The pre-existing MacrosWizard/App/domain suites import the Module-1 energy domain via the @energy alias; on this branch src/features/energy/domain is absent, so for a FULL green run temporarily materialize the energy domain from main (git checkout main -- src/features/energy/domain) WITHOUT committing it, run verification, then remove it. The new data-layer suites are self-contained (no @energy dependency) and pass independently. SQL/RLS cannot be unit-tested without a live Supabase DB; it is statically validated and documented for the Supabase SQL editor.",
+  "snapshot_or_generated_files": "None checked in. Supabase types are hand-written strict types (no CLI dependency); the file documents how to regenerate with `supabase gen types typescript` if the CLI is ever installed. Vite build output and coverage are gitignored.",
+  "setup_instructions": "Node 20+ (v22.23.3 present). From repo root: cd apps/macros-web && npm install @supabase/supabase-js @tanstack/react-query. Env: copy .env.example to .env and fill VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY (anon key is public by design; never commit real keys or a service_role key). .env/.env.* are gitignored (keeping !.env.example).",
+  "environment_constraints": "OPEN_INTERNET: npm installs reachable. NO live Supabase database in the sandbox, so the SQL migration + RLS cannot be executed/verified against a real DB here; it is shipped correct and self-consistent and documented for the Supabase SQL editor. @supabase/supabase-js and @tanstack/react-query are NOT yet installed and must be added.",
+  "contribution_requirements": "Conventional commits. ESLint no-console (error): no console in committed code; use an injectable callback seam if a log point is needed. Immutability, small focused files (200-400 lines typical, 800 max, functions <50 lines), strict TS with NO `any`, no hardcoded secrets. Min 80% coverage, unit + integration.",
+  "key_patterns": "Zod + strict types established. Supabase client initialized ONLY from VITE_ env vars with a clear thrown error on missing vars. Data-access functions are pure async wrappers over the Supabase client that return data or throw a mapped clear Error (PostgrestError mapped to a non-leaky Error). TanStack Query for fetch (useMacroGoal) + mutation (useSaveMacroGoal, invalidates on success); NO useEffect for data fetching. Macro-goal shape aligns with the existing MacroResult (calorieTarget/tdee + protein/fat/carbs grams); goal_type is a constrained enum (deficit/mantenimiento/volumen).",
+  "relevant_files": [
+    "apps/macros-web/src/domain/macroCalculator.ts (MacroResult shape to align macro_goals columns/types with)",
+    "apps/macros-web/src/features/auth/storage/types.ts (TokenStorage pattern; the auth submit is still a stub, document the Supabase auth seam)",
+    "apps/macros-web/src/features/auth/useAuthSubmit.ts (injectable-callback seam pattern to avoid console)",
+    "apps/macros-web/vite.config.ts + tsconfig.json (@energy alias; strict TS settings)",
+    "apps/macros-web/vitest.config.ts (coverage thresholds, jsdom env)",
+    "apps/macros-web/eslint.config.js (no-console=error)",
+    "apps/macros-web/.gitignore (add .env/.env.*, keep !.env.example)"
+  ],
+  "directory_structure": "NEW for this module in apps/macros-web: supabase/migrations/0001_init.sql (schema+triggers+RLS); src/lib/supabaseClient.ts (env-driven client + env helper); src/data/database.types.ts (hand-written strict DB types); src/features/macro-goals/{types.ts, macroGoals.data.ts (pure async data-access), hooks (queryClient.ts, useMacroGoal.ts, useSaveMacroGoal.ts), __tests__}. QueryClientProvider wired at the app root."
+}
