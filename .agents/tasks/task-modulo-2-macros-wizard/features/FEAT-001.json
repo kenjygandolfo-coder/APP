@@ -1,0 +1,28 @@
+{
+  "id": "FEAT-001",
+  "type": "chore",
+  "description": "Scaffold the Vite + React 18 + TypeScript + Tailwind CSS web module at apps/macros-web with all config, Google Fonts, design-system tokens, and the test toolchain (Vitest + RTL + Playwright). Establish a green baseline. This is a NEW DOM React app (separate from the Expo/RN root app) because Tailwind CSS, <select>/<input>, and backdrop-blur do not render on React Native components.",
+  "status": "completed",
+  "steps": [
+    "Create apps/macros-web/package.json with React 18, react-dom 18, react-hook-form, @hookform/resolvers, zod ^3.25, vite, @vitejs/plugin-react, typescript, tailwindcss/postcss/autoprefixer, vitest, @testing-library/react, @testing-library/jest-dom, @testing-library/user-event, jsdom, @playwright/test, eslint. Scripts: dev, build, preview, typecheck, lint, test, test:coverage, test:e2e.",
+    "Create vite.config.ts (react plugin; resolve alias '@energy' -> ../../src/features/energy/domain so the web module reuses the portable pure domain). Create vitest.config.ts (jsdom env, globals, setupFiles, coverage v8 thresholds 80).",
+    "Create tsconfig.json / tsconfig.node.json (strict, bundler moduleResolution, jsx react-jsx, path alias @energy, include ../../src/features/energy/domain).",
+    "Create tailwind.config.ts encoding the design system in theme.extend.colors (cream #f4f1ea, sage #8a9a5b, pink #e8c4c4, ink #3e4a3d, muted #6b705c, card rgba(255,255,255,0.88), cardBorder rgba(255,255,255,0.6)), fontFamily (sans Montserrat, serif Playfair Display), borderRadius card 16px. postcss.config.js with tailwindcss + autoprefixer.",
+    "Create index.html with Google Fonts <link> for Montserrat + Playfair Display and root div. Create src/index.css with @tailwind base/components/utilities, body background cream + subtle dot pattern, and a reusable .card utility. Create src/main.tsx mounting <App/>.",
+    "Create eslint config with no-console: error. Create .gitignore (node_modules, dist, coverage, test-results, playwright-report). Create playwright.config.ts serving the vite preview build.",
+    "Run npm install, npm run typecheck, npm run lint, npm run build to confirm a green baseline."
+  ],
+  "acceptance_criteria": [
+    "`cd apps/macros-web && npm install` succeeds",
+    "`npm run typecheck` passes with no errors",
+    "`npm run build` produces apps/macros-web/dist",
+    "tailwind.config.ts contains the named palette tokens (not scattered hex)",
+    "index.html links Montserrat and Playfair Display from Google Fonts"
+  ],
+  "verification": [
+    "Run `cd apps/macros-web && npm run typecheck` and confirm it passes",
+    "Run `cd apps/macros-web && npm run build` and confirm dist/ is produced"
+  ],
+  "blocked_reason": null,
+  "findings": "Scaffold created at apps/macros-web (Vite 6 + React 18.3 + TS 5.7 strict + Tailwind v3.4). Chose Tailwind v3 (stable PostCSS plugin API) over v4 to keep postcss.config.js standard. All verification green on Node v22.23.3 / npm 11.4.2 (OPEN_INTERNET):\n- `npm install`: added 500 packages, exit 0 (11 npm-audit vulnerabilities reported in transitive dev deps; not addressed, out of scope for scaffold).\n- `npm run typecheck` (tsc --noEmit): exit 0, no errors.\n- `npm run lint` (eslint .): exit 0, no errors. no-console set to 'error' (config files exempted via node-globals block).\n- `npm run build` (tsc && vite build): exit 0, produced dist/ (index.html + assets/*.css + *.js, 27 modules).\n- `npm run test -- --run` (vitest): 2/2 passed, confirming the '@energy' alias resolves the reused portable domain under Vitest (calculateTdee multiplier for 'moderate' = 1.55).\n\nIMPORTANT deviations/notes for later features:\n1. tsconfig: removed the project-reference to tsconfig.node.json because TS required composite:true which conflicts with noEmit. tsconfig.node.json remains as a valid standalone config listing the config files; `npm run typecheck` only covers src + ../../src/features/energy/domain. ESLint covers config files.\n2. '@energy' alias resolves to ../../src/features/energy/domain (dir) in vite.config.ts and vitest.config.ts; tsconfig maps '@energy' -> .../index.ts and '@energy/*' -> .../*. Domain index re-exports calculateTdee, tdeeInputSchema, ACTIVITY_LEVELS, ACTIVITY_LABELS_ES, ACTIVITY_MULTIPLIERS, SEXES, INPUT_LIMITS, CalculationInputError. Verified enum values: SEXES=['male','female']; ACTIVITY_LEVELS=['sedentary','light','moderate','veryActive','extraActive'] with ES labels in ACTIVITY_LABELS_ES.\n3. zod installed at ^3.25.76 (same major as root), compatible with domain's `import type { z } from 'zod'`.\n4. Design tokens live only in tailwind.config.ts theme.extend (cream/sage/pink/ink/muted/card/cardBorder, fontFamily sans=Montserrat serif=Playfair Display, borderRadius.card=16px). .card component class + subtle sage dot-grid body background in src/index.css. Google Fonts linked in index.html.\n5. App.tsx is a placeholder; main.tsx mounts it in StrictMode. Wizard UI + macro math are for FEAT-002/003.\n6. Playwright config serves vite preview on port 4173 (webServer runs build + preview --strictPort). A smoke e2e spec exists at e2e/smoke.spec.ts. Playwright browser binaries NOT installed yet (`npx playwright install chromium` needed before running test:e2e).\n7. Changes left uncommitted in working tree per orchestrator instruction. Current git branch: feat/modulo-1-cimientos."
+}
