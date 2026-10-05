@@ -1,0 +1,15 @@
+{
+  "task_id": "task-modulo-7-macro-goal-rpc",
+  "task_description": "Convert the macro-goal save into a transactional Postgres RPC (public.save_active_macro_goal) that atomically deactivates prior active goals and inserts the new one, closing the non-transactional gap flagged by the PR #4 review. Refactor saveMacroGoal to call the RPC, type it strictly (no any), and update tests. Base: feat/modulo-6-food-logs-dashboard; proposed branch: fix/macro-goal-transactional-save.",
+  "status": "completed",
+  "feature_order": ["FEAT-001"],
+  "blocked_reason": null,
+  "verification": {
+    "build": "pass",
+    "tests": "pass",
+    "test_quality": "pass",
+    "docker_build": "skipped",
+    "review": "APPROVED (v1) — see 2026-10-05-053800-review.md. Three non-blocking suggestions; two applied as hardening (success-path !data guard + explicit revoke/grant execute on the function); the third is environment-limited (no live DB).",
+    "summary": "After hardening: macro-goals suite 19/19 and full suite 205/205 green; typecheck clean (no any); eslint clean (no-console). macro-goals feature folder at 100% stmts/branch/funcs/lines; full-suite coverage gate (80%) not tripped. Test quality confirmed via mutation (wrong rpc fn name fails the test). SQL 0002 validated statically only (no live Supabase); no Dockerfile for this web module so docker build skipped."
+  }
+}
