@@ -1,0 +1,25 @@
+{
+  "id": "FEAT-002",
+  "type": "feat",
+  "description": "Zod validation schemas for Login and Registro using the project's zod + zodResolver + react-hook-form pattern. Login schema: email (valid email) + password (min length). Registro schema: email + password + confirmPassword with a cross-field .refine() that confirmPassword must equal password, error attached to the confirmPassword path. Spanish error messages, frozen copy. All inputs validated; no raw password ever logged. Depends on nothing; consumed by FEAT-003.",
+  "status": "completed",
+  "steps": [
+    "Create apps/macros-web/src/features/auth/schemas/auth.schema.ts: export loginSchema = z.object({ email: z.string().min(1,...).email(...), password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres.') }). export type LoginValues = z.infer<typeof loginSchema>.",
+    "In the same file export registerSchema = loginSchema.extend({ confirmPassword: z.string().min(1,...) }).refine(d => d.password === d.confirmPassword, { message: 'Las contraseñas no coinciden.', path: ['confirmPassword'] }). export type RegisterValues = z.infer<typeof registerSchema>. Keep messages in Spanish, consistent tone with existing wizard copy.",
+    "Export loginDefaults and registerDefaults (empty-string defaults) so inputs stay controlled, mirroring wizard.schema.ts defaultValues pattern.",
+    "Create apps/macros-web/src/features/auth/copy.es.ts: frozen Spanish UI strings for both screens (titles, subtitles, field labels email/contraseña/confirmar contraseña, submit button labels, link to switch between Login and Registro, success messages). Reuse tone from macros-wizard copy.es.ts.",
+    "Write apps/macros-web/src/features/auth/schemas/__tests__/auth.schema.test.ts (TDD): loginSchema rejects invalid email and short password, accepts a valid pair; registerSchema rejects when passwords differ (error on confirmPassword path) and accepts when they match; a redacted-shape helper (if added) never includes the raw password."
+  ],
+  "acceptance_criteria": [
+    "loginSchema.safeParse rejects invalid email and passwords shorter than the minimum, and accepts a valid credential pair.",
+    "registerSchema reports a 'Las contraseñas no coinciden.' error on the confirmPassword path when passwords differ, and parses successfully when they match.",
+    "Running `npm run test -- --run src/features/auth/schemas` passes.",
+    "All messages are in Spanish; types LoginValues/RegisterValues are exported and strict."
+  ],
+  "verification": [
+    "cd apps/macros-web && npm run test -- --run src/features/auth/schemas",
+    "cd apps/macros-web && npm run typecheck"
+  ],
+  "blocked_reason": null,
+  "findings": "Created src/features/auth/schemas/auth.schema.ts (loginSchema, registerSchema with cross-field confirmPassword refine on the confirmPassword path, LoginValues/RegisterValues types, loginDefaults/registerDefaults as const) and src/features/auth/copy.es.ts (frozen Spanish copy for both screens: titles/subtitles/field labels/placeholders/submit labels/switch links/success messages for FEAT-003). TDD: wrote failing test first (RED), then implementation (GREEN). 8/8 tests pass via `npm run test -- --run src/features/auth/schemas`; `npm run lint` clean. New files are type-clean (verified via isolated tsc --strict and the scoped Vitest run which type-checks on import). As documented in context.json, full-repo `npm run typecheck`/`npm run build` fail on this branch due to the pre-existing @energy alias resolution (Module 1 domain absent on feat/modulo-2-macros-wizard) and are unrelated to these auth files. copy.es.ts is intentionally not yet imported anywhere; FEAT-003 will consume it. Note: current branch is feat/modulo-2-macros-wizard (not feat/modulo-3-auth); committed here per workspace state."
+}
