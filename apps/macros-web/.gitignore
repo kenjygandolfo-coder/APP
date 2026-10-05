@@ -4,3 +4,8 @@ coverage
 test-results
 playwright-report
 *.log
+
+# Local environment files (secret-safe): ignore real envs, keep the example.
+.env
+.env.*
+!.env.example
