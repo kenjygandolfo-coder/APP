@@ -1,0 +1,32 @@
+{
+  "project_type": "Vite + React 18 + TypeScript + Tailwind web module (apps/macros-web) inside a monorepo whose root is an Expo React Native app",
+  "language": "TypeScript (strict, no any)",
+  "build_system": "npm scripts in apps/macros-web (vite build via tsc && vite build)",
+  "test_framework": "Vitest + React Testing Library (jsdom), renderHook for hooks; Playwright configured for E2E (test:e2e)",
+  "build_command": "cd apps/macros-web && npm run build",
+  "test_command": "cd apps/macros-web && npx vitest run",
+  "verification_instructions": "From apps/macros-web run: npx vitest run (unit+integration), npm run typecheck (tsc --noEmit), npm run lint (eslint, enforces no-console / strict). Coverage via npm run test:coverage. All must pass. The macros-wizard and App suites depend on the @energy alias which resolves to ../../src/features/energy/domain (Module-1 code that lives on main, NOT on this branch). To run the FULL suite green, TEMPORARILY materialize that directory with: git show main:src/features/energy/domain/<file> > src/features/energy/domain/<file> for files [CalculationInputError.ts, activityLevels.ts, energy.schema.ts, energyCalculator.ts, harrisBenedict.constants.ts, index.ts]. REMOVE src/features/energy/ before any commit so it never enters the diff. NEW food-logs suites must be self-contained (no @energy import).",
+  "snapshot_or_generated_files": "coverage/ and test-results/ are generated and gitignored. database.types.ts is hand-written (NOT regenerated) and is the source of truth mirroring supabase/migrations/0001_init.sql.",
+  "setup_instructions": "Node v22 (nvm). cd apps/macros-web && npm install (deps already present in lockfile: @supabase/supabase-js, @tanstack/react-query, react-hook-form, @hookform/resolvers, zod). Supabase client reads VITE_ env vars via src/lib/supabaseClient.ts / env.ts; no live Supabase is available in-sandbox so all data access is covered by mocked tests.",
+  "environment_constraints": "OPEN_INTERNET available. NO live Supabase instance in-sandbox: data-layer and hooks are validated exclusively through mocked SupabaseClient chains and a QueryClient wrapper, never against a real DB. E2E against a live backend is NOT feasible; document rather than run a backend-dependent Playwright flow. The Module-1 energy domain is absent on this branch (see verification_instructions for the temporary materialize/remove dance).",
+  "contribution_requirements": "Conventional commits (feat/test/docs/chore). Steering hard constraints: TypeScript strict + zero any; NO useEffect for data fetching (TanStack Query only); reuse FormCard/TextField/Button; non-leaky Postgrest error mapping (mirror toClearError, raw error only in cause); immutability (pure reduce, new objects, frozen constants); zod validation of all form input; no console.log (ESLint no-console); elegant isLoading/isError UI; min 80% coverage with unit + integration tests; NO AI food search / external product DB (manual entry only). Keep the Expo root app untouched.",
+  "key_patterns": "Data layer = pure async fns taking an injected SupabaseClient<Database> with toClearError('<feature>: <context>', error) wrapping (raw error only in cause). Query keys = Object.freeze factory keyed precisely (food logs keyed by userId AND date). Read hook = useQuery with enabled: Boolean(...). Mutation hook = useMutation with onSuccess invalidating the exact key via the shared factory. Spanish copy in a frozen copy.es.ts per feature. UI primitives imported from ../macros-wizard/components. Design tokens are Tailwind theme NAMES (bg-cream, text-ink, text-muted, bg-sage, border-sage, border-pink/bg-pink, rounded-card, bg-card, bg-cardBorder/border-cardBorder, backdrop-blur, font-serif, font-sans) - never raw hex. userId comes from useSession()/useCurrentUserId() in features/auth.",
+  "relevant_files": [
+    "apps/macros-web/src/data/database.types.ts (food_logs Row/Insert — exact shape)",
+    "apps/macros-web/supabase/migrations/0001_init.sql (food_logs CHECK constraints: quantity numeric>0, unit default 'g', calories integer>=0, protein/fat/carbs numeric>=0 default 0, logged_on date default current_date; RLS auth.uid()=user_id)",
+    "apps/macros-web/src/features/macro-goals/macroGoals.data.ts (toClearError + pure-fn pattern to copy)",
+    "apps/macros-web/src/features/macro-goals/queryKeys.ts (frozen key factory to mirror)",
+    "apps/macros-web/src/features/macro-goals/useMacroGoal.ts (useQuery enabled pattern)",
+    "apps/macros-web/src/features/macro-goals/useSaveMacroGoal.ts (useMutation + invalidate pattern)",
+    "apps/macros-web/src/features/macro-goals/types.ts (MacroGoal type = calorie_target, protein_g, fat_g, carbs_g, tdee, goal_type)",
+    "apps/macros-web/src/features/macro-goals/__tests__/macroGoals.data.test.ts (mock chain + non-leak assertions to mirror)",
+    "apps/macros-web/src/features/macro-goals/__tests__/useMacroGoal.test.tsx (QueryClient wrapper for hook tests)",
+    "apps/macros-web/src/features/macro-goals/__tests__/useSaveMacroGoal.test.tsx (invalidateQueries spy pattern)",
+    "apps/macros-web/src/features/macros-wizard/components/{FormCard,TextField,Button,SelectField}.tsx (UI primitives to reuse)",
+    "apps/macros-web/src/features/auth/copy.es.ts (frozen copy convention)",
+    "apps/macros-web/src/features/auth/useSession.ts (useSession/useCurrentUserId -> userId)",
+    "apps/macros-web/src/features/auth/SessionPanel.tsx (authenticated-only panel pattern)",
+    "apps/macros-web/src/App.tsx (composition root / view switch to wire into)"
+  ],
+  "directory_structure": "apps/macros-web/src/features/<feature>/ holds data (<feature>.data.ts), queryKeys.ts, use*.ts hooks, components (*.tsx), schemas, copy.es.ts, types.ts, and __tests__/. New feature dir: apps/macros-web/src/features/food-logs/. UI primitives shared from macros-wizard/components. Composition root is src/App.tsx."
+}

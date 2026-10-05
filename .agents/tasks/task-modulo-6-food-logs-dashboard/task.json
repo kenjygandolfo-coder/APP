@@ -1,0 +1,21 @@
+{
+  "task_id": "task-modulo-6-food-logs-dashboard",
+  "task_description": "Build the real-time macro-discounting Daily Dashboard and Manual Food logging for apps/macros-web. Add a food-logs data layer (getDailyFoodLogs + addFoodLog) mirroring the macro-goals pattern, a per-date query-key factory, useDailyFoodLogs(userId, date) read hook and useAddFoodLog(userId) mutation that invalidates the exact per-date key on success, a PURE tested summarizeDailyMacros(logs, goal) function (immutable reduce; remaining = goal - consumed per metric; progress clamped to [0,100] but real negative remaining shown in a warning accent for over-budget), a ManualFoodForm (RHF + zod, reuses FormCard/TextField/Button, clears on success), a DailyDashboard (consumes useMacroGoal + useDailyFoodLogs, cozy loading/error/empty/no-goal states), a food-logs zod schema + frozen copy.es.ts, and App wiring behind the authenticated session. Manual entry only (no AI/external food DB). TypeScript strict/no-any, no useEffect fetching, immutability, non-leaky errors, >=80% coverage with unit + integration tests.",
+  "status": "completed",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003"],
+  "blocked_reason": null,
+  "verification": {
+    "build": "pass",
+    "tests": "pass",
+    "test_quality": "pass",
+    "docker_build": "skipped",
+    "summary": "From apps/macros-web (energy domain temporarily materialized from main, then removed before any commit): npx vitest run = 197/197 across 35 files (41 are the new/related food-logs suites); npm run typecheck (tsc --noEmit) clean with zero any; npm run lint (eslint, no-console) clean; npm run build (tsc && vite build) succeeds. Test quality reviewed: foodLogs.data tests assert user+date scoping, [] on empty, non-leaky errors (raw detail/hint/message absent, cause preserved), no-mutate and default/override behavior; useAddFoodLog spies invalidateQueries with the exact per-date key from the inserted row's logged_on and asserts no invalidation on reject; summarizeDailyMacros covers empty/partial/at-goal/over-goal/null-goal with clamped percent and negative remaining; DailyDashboard asserts real computed remaining values, over-budget negative remaining in the pink warning accent with the bar clamped at 100%, loading/error(no leak)/no-goal(no NaN)/empty states. Tests would fail on regression. No Dockerfile for the web module, so docker build is not applicable. No live Supabase in-sandbox: data layer and hooks validated via mocked SupabaseClient chains and a QueryClient wrapper (documented)."
+  },
+  "semantic_review": {
+    "iterations": 2,
+    "final_verdict": "APPROVED",
+    "v1": "NEEDS_CHANGES — flagged (1) a timezone write/read date mismatch (dashboard queried browser-local date while inserts used the UTC current_date default, breaking real-time updates for off-UTC users) and (2) untested App.tsx diario wiring. See 2026-10-05-051626-review.md.",
+    "v2": "APPROVED — both issues resolved via a shared pure today.ts localToday() used by both the dashboard query and the form's logged_on stamp, plus signed-in/signed-out App.test.tsx cases. No regressions. See 2026-10-05-052359-review.md."
+  },
+  "naming_note": "The user calls this 'Modulo 5' in prose, but Modulo 5 (supabase-auth) already exists in .tasks/ and .agents/tasks/. This work stacks on feat/modulo-5-supabase-auth and is therefore sequenced as Modulo 6 to avoid collision. Plan doc: .tasks/06-modulo-6-food-logs-dashboard-plan.md. Proposed branch feat/modulo-6-food-logs-dashboard, base feat/modulo-5-supabase-auth (stacked PR). Merge order: #1 -> #2 -> #3 -> #4 -> #5 -> this."
+}
