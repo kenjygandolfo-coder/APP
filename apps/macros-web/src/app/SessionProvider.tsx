@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Session, SupabaseClient } from '@supabase/supabase-js';
 import { useEffect, useState, type ReactNode } from 'react';
 
 import type { Database } from '../data/database.types';
@@ -26,6 +26,12 @@ interface SessionProviderProps {
  * Seeds the auth session once on mount via `getCurrentSession()` (session
  * bootstrap, not data fetching) and keeps it in sync through an
  * `onAuthStateChange` subscription. The subscription is torn down on unmount.
+ *
+ * BOOTSTRAP ORDERING: the async seed and the subscription both write state, so
+ * the seed is applied ONLY while `status === 'loading'` (functional update).
+ * This guards against a slow-resolving seed clobbering a newer `onAuthStateChange`
+ * event (e.g. INITIAL_SESSION / SIGNED_IN) that already landed first. The
+ * subscription remains the source of truth once the first real event arrives.
  */
 export function SessionProvider({
   children,
@@ -37,19 +43,23 @@ export function SessionProvider({
     const activeClient = client ?? getSupabaseClient();
     let active = true;
 
+    // The seed only wins while still loading; a real auth event that already
+    // moved status off 'loading' is never overwritten by a late seed.
+    const applySeed = (session: Session | null): void => {
+      if (!active) {
+        return;
+      }
+      setState((prev) =>
+        prev.status === 'loading' ? toSessionState(session) : prev,
+      );
+    };
+
     getCurrentSession(activeClient)
-      .then((session) => {
-        if (active) {
-          setState(toSessionState(session));
-        }
-      })
-      .catch(() => {
-        if (active) {
-          setState(toSessionState(null));
-        }
-      });
+      .then(applySeed)
+      .catch(() => applySeed(null));
 
     const { data } = activeClient.auth.onAuthStateChange((_event, session) => {
+      // Auth events are authoritative and always applied.
       setState(toSessionState(session));
     });
 

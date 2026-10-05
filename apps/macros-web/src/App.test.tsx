@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 // Confirms the "@energy" alias resolves the reused portable domain under Vitest.
@@ -26,7 +26,9 @@ function makeMockClient(): Client {
   } as unknown as Client;
 }
 
-function renderApp(): void {
+// Awaits the async SessionProvider seed (getSession) so the state settles
+// inside `act`, keeping the suite free of React act() warnings.
+async function renderApp(): Promise<void> {
   render(
     <SessionProvider client={makeMockClient()}>
       <QueryProvider>
@@ -34,11 +36,14 @@ function renderApp(): void {
       </QueryProvider>
     </SessionProvider>,
   );
+  await waitFor(() =>
+    expect(screen.getByText(/paso 1 de 4/i)).toBeInTheDocument(),
+  );
 }
 
 describe('App', () => {
-  it('renders the app title as the top-level heading', () => {
-    renderApp();
+  it('renders the app title as the top-level heading', async () => {
+    await renderApp();
     expect(
       screen.getByRole('heading', { level: 1, name: /calculadora de macros/i }),
     ).toBeInTheDocument();
@@ -47,8 +52,8 @@ describe('App', () => {
     ).toBeInTheDocument();
   });
 
-  it('renders the macros wizard starting on step 1', () => {
-    renderApp();
+  it('renders the macros wizard starting on step 1', async () => {
+    await renderApp();
     expect(screen.getByText(/paso 1 de 4/i)).toBeInTheDocument();
     expect(
       screen.getByRole('heading', { name: /sobre ti/i }),

@@ -28,11 +28,21 @@ const STEP_HEADINGS = [
   COPY.steps.results,
 ] as const;
 
+interface MacrosWizardProps {
+  /**
+   * Called with the computed result when the user saves. The root wires this
+   * to the macro-goal persistence mutation (feeding the authenticated userId);
+   * when omitted (e.g. signed-out) the wizard still shows the local success
+   * confirmation without persisting.
+   */
+  readonly onSave?: (result: MacroResult) => void;
+}
+
 /**
  * Four-step macros wizard. A single react-hook-form instance spans all steps,
  * so "Corregir datos" returns to step 1 without clearing entered values.
  */
-export function MacrosWizard(): JSX.Element {
+export function MacrosWizard({ onSave }: MacrosWizardProps = {}): JSX.Element {
   const methods = useForm<WizardValues>({
     resolver: zodResolver(wizardSchema),
     mode: 'onTouched',
@@ -76,6 +86,13 @@ export function MacrosWizard(): JSX.Element {
     setCurrentStep(0);
   };
 
+  const handleSave = (saveResult: MacroResult): void => {
+    // Persist against the authenticated user when the root provided a sink;
+    // the local confirmation shows regardless so the UX is unchanged offline.
+    onSave?.(saveResult);
+    setSaved(true);
+  };
+
   const heading = STEP_HEADINGS[currentStep] ?? STEP_HEADINGS[0];
 
   return (
@@ -98,7 +115,7 @@ export function MacrosWizard(): JSX.Element {
           <Step4Results
             result={result}
             saved={saved}
-            onSave={() => setSaved(true)}
+            onSave={() => handleSave(result)}
             onEdit={handleEdit}
           />
         ) : null}

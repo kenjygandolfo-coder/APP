@@ -17,6 +17,8 @@ export const COPY = Object.freeze({
     submit: 'Crear cuenta',
     switchPrompt: '¿Ya tienes cuenta? Inicia sesión',
     success: '¡Cuenta creada con éxito!',
+    confirmEmail:
+      '¡Cuenta creada! Revisa tu correo para confirmar tu cuenta antes de iniciar sesión.',
   }),
   fields: Object.freeze({
     email: 'Correo electrónico',

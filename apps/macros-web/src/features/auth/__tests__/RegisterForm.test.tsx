@@ -108,6 +108,45 @@ describe('RegisterForm', () => {
     );
   });
 
+  it('shows a "revisa tu correo" message when sign-up returns no session', async () => {
+    const user = userEvent.setup();
+    // Email-confirmation projects resolve a null session until the link is clicked.
+    signUpWithPassword.mockResolvedValueOnce(null);
+    render(<RegisterForm />);
+
+    await user.type(screen.getByLabelText(COPY.fields.email), VALID_EMAIL);
+    await user.type(screen.getByLabelText(COPY.fields.password), VALID_PASSWORD);
+    await user.type(
+      screen.getByLabelText(COPY.fields.confirmPassword),
+      VALID_PASSWORD,
+    );
+    await user.click(screen.getByRole('button', { name: COPY.register.submit }));
+
+    const status = await screen.findByRole('status');
+    expect(status).toHaveTextContent(COPY.register.confirmEmail);
+    // It must NOT imply an active session.
+    expect(status).not.toHaveTextContent(COPY.register.success);
+  });
+
+  it('shows the plain success message when sign-up returns a session', async () => {
+    const user = userEvent.setup();
+    signUpWithPassword.mockResolvedValueOnce({
+      session: { user: { id: 'user-1' } },
+    });
+    render(<RegisterForm />);
+
+    await user.type(screen.getByLabelText(COPY.fields.email), VALID_EMAIL);
+    await user.type(screen.getByLabelText(COPY.fields.password), VALID_PASSWORD);
+    await user.type(
+      screen.getByLabelText(COPY.fields.confirmPassword),
+      VALID_PASSWORD,
+    );
+    await user.click(screen.getByRole('button', { name: COPY.register.submit }));
+
+    const status = await screen.findByRole('status');
+    expect(status).toHaveTextContent(COPY.register.success);
+  });
+
   it('shows a friendly, non-leaky error when the real sign-up rejects', async () => {
     const user = userEvent.setup();
     signUpWithPassword.mockRejectedValueOnce(

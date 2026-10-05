@@ -33,17 +33,30 @@ export function makeLoginSubmit(client?: Client): AuthSubmitHandler<LoginValues>
 }
 
 /**
+ * Outcome of a sign-up. `pendingConfirmation` is `true` when the provider
+ * resolved NO session (email-confirmation projects return `null` until the
+ * emailed link is clicked), so the UI can show a "check your email" state
+ * instead of implying an active session.
+ */
+export interface RegisterResult {
+  readonly pendingConfirmation: boolean;
+}
+
+/**
  * Build the real Registro submit handler. Maps {@link RegisterValues} to the
  * `{ email, password }` the provider expects, intentionally DROPPING
- * `confirmPassword` so it never reaches Supabase.
+ * `confirmPassword` so it never reaches Supabase. Surfaces whether the sign-up
+ * is pending email confirmation (null session) so the form can branch on it;
+ * when a session materializes, `onAuthStateChange` remains the source of truth.
  */
 export function makeRegisterSubmit(
   client?: Client,
-): AuthSubmitHandler<RegisterValues> {
-  return async (values: RegisterValues): Promise<void> => {
-    await signUpWithPassword(resolveClient(client), {
+): AuthSubmitHandler<RegisterValues, RegisterResult> {
+  return async (values: RegisterValues): Promise<RegisterResult> => {
+    const session = await signUpWithPassword(resolveClient(client), {
       email: values.email,
       password: values.password,
     });
+    return { pendingConfirmation: session === null };
   };
 }

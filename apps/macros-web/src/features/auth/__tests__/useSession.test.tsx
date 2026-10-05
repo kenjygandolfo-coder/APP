@@ -134,4 +134,50 @@ describe('useSession', () => {
       /within a <SessionProvider>/,
     );
   });
+
+  it('does not let a late seed clobber a newer auth event (bootstrap race)', async () => {
+    // getSession resolves LATE (deferred), so an auth event can land first.
+    let resolveSeed: (value: {
+      data: { session: Session | null };
+      error: null;
+    }) => void = () => undefined;
+    let captured: AuthCallback | null = null;
+    const unsubscribe = vi.fn();
+
+    const client = {
+      auth: {
+        getSession: vi.fn(
+          () =>
+            new Promise((resolve) => {
+              resolveSeed = resolve;
+            }),
+        ),
+        onAuthStateChange: vi.fn((callback: AuthCallback) => {
+          captured = callback;
+          return { data: { subscription: { unsubscribe } } };
+        }),
+      },
+    } as unknown as Client;
+
+    const { result } = renderHook(() => useSession(), {
+      wrapper: createWrapper(client),
+    });
+
+    // A fresh auth event arrives BEFORE the seed resolves.
+    act(() => {
+      captured?.('SIGNED_IN', sampleSession);
+    });
+    expect(result.current.status).toBe('authenticated');
+    expect(result.current.userId).toBe('user-1');
+
+    // The late seed (null session) must NOT overwrite the newer authenticated
+    // state, because the seed only applies while status === 'loading'.
+    await act(async () => {
+      resolveSeed({ data: { session: null }, error: null });
+      await Promise.resolve();
+    });
+
+    expect(result.current.status).toBe('authenticated');
+    expect(result.current.userId).toBe('user-1');
+  });
 });

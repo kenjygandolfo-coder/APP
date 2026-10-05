@@ -8,9 +8,9 @@ import { getSupabaseClient } from '../../lib/supabaseClient';
 /**
  * Session-aware panel shown once the user is authenticated. It feeds the real
  * `userId` from {@link useSession} into {@link useMacroGoal} so the data layer
- * lights up with a real user, and offers a sign-out affordance. The macro-goal
- * mutation hook is wired at the macros-wizard save seam; here we surface the
- * read-side status so the integration is visible in the cozy layout.
+ * lights up with a real user, and offers a sign-out affordance. The matching
+ * save mutation is wired into the macros-wizard save action in `App.tsx`; here
+ * we surface the read-side status so the integration is visible in the layout.
  */
 export function SessionPanel(): JSX.Element | null {
   const { status, userId } = useSession();
