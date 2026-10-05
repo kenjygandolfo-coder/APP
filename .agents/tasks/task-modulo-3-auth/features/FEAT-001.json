@@ -1,0 +1,30 @@
+{
+  "id": "FEAT-001",
+  "type": "feat",
+  "description": "Platform-adaptive secure token storage: a shared TokenStorage interface (saveToken/getToken/deleteToken) with TWO implementations behind runtime platform selection. Web impl uses localStorage (the pragmatic web fallback, with the XSS trade-off documented). Native impl uses expo-secure-store (Keychain/Keystore) and is written so it is tree-shaken/guarded out of the web bundle (lazy import, never executed under the DOM module). A useAuthStorage React hook exposes the active implementation with comprehensive error handling. Independent of the forms (FEAT-002/003 consume it). Verify with Vitest unit tests: save/get/delete round-trip on the web impl, delete clears, platform selection returns the web impl under jsdom, and error branches (storage throwing) are handled.",
+  "status": "completed",
+  "steps": [
+    "Create apps/macros-web/src/features/auth/storage/types.ts: export interface TokenStorage { saveToken(token: string): Promise<void>; getToken(): Promise<string | null>; deleteToken(): Promise<void>; } and a shared TOKEN_STORAGE_KEY constant (e.g. 'fitness.auth.token'). No hardcoded secrets.",
+    "Create apps/macros-web/src/features/auth/storage/webTokenStorage.ts: implement TokenStorage via window.localStorage. Wrap every call in try/catch; on failure throw a descriptive Error (never leak internals). Add a top-of-file comment: localStorage is readable by any script on the origin, so it is vulnerable to XSS; it is the pragmatic WEB fallback. The hardened native path (Keychain/Keystore) is expo-secure-store. Validate token is a non-empty string before saving.",
+    "Create apps/macros-web/src/features/auth/storage/nativeTokenStorage.ts: implement TokenStorage via expo-secure-store (setItemAsync/getItemAsync/deleteItemAsync). Use a lazy dynamic import() inside each method so the module is NOT resolved by the Vite web bundle, and document the exact install command (npx expo install expo-secure-store). This is the native branch of the SAME interface, ready for the Expo app.",
+    "Create apps/macros-web/src/features/auth/storage/platform.ts: export isNativePlatform() that detects React Native (e.g. navigator.product === 'ReactNative' or absence of window). export createTokenStorage(): TokenStorage that returns nativeTokenStorage on native and webTokenStorage on web. Keep functions pure and tiny.",
+    "Create apps/macros-web/src/features/auth/storage/useAuthStorage.ts: a hook returning { saveToken, getToken, deleteToken } bound to createTokenStorage(), memoized with useMemo so the same instance is reused across renders.",
+    "Create apps/macros-web/src/features/auth/storage/index.ts barrel re-exporting the public surface.",
+    "Write apps/macros-web/src/features/auth/storage/__tests__/webTokenStorage.test.ts (TDD RED first): round-trip save->get returns the token; delete->get returns null; saving empty string rejects; get/save/delete surface a thrown error when localStorage throws (mock a throwing storage).",
+    "Write apps/macros-web/src/features/auth/storage/__tests__/platform.test.ts: isNativePlatform() is false under jsdom; createTokenStorage() returns an object exposing saveToken/getToken/deleteToken; when navigator.product is stubbed to 'ReactNative', isNativePlatform() is true (restore stub after)."
+  ],
+  "acceptance_criteria": [
+    "Running `npm run test -- --run src/features/auth/storage` passes all storage unit tests.",
+    "webTokenStorage round-trips a token and deleteToken clears it (getToken returns null afterwards).",
+    "createTokenStorage() returns the web implementation under jsdom; platform detection flips to native when navigator.product==='ReactNative'.",
+    "nativeTokenStorage uses a lazy dynamic import of expo-secure-store so `npm run build` succeeds WITHOUT expo-secure-store installed in the web module.",
+    "npm run lint passes (no inline console.log; errors thrown, not logged)."
+  ],
+  "verification": [
+    "cd apps/macros-web && npm run test -- --run src/features/auth/storage",
+    "cd apps/macros-web && npm run typecheck",
+    "cd apps/macros-web && npm run lint"
+  ],
+  "blocked_reason": null,
+  "findings": "Implemented under apps/macros-web/src/features/auth/storage/: types.ts (TokenStorage interface + TOKEN_STORAGE_KEY='fitness.auth.token'), webTokenStorage.ts (localStorage impl, try/catch rethrow of Spanish descriptive errors, rejects empty/whitespace/non-string tokens, XSS trade-off documented at top), nativeTokenStorage.ts (expo-secure-store via LAZY dynamic import of a runtime-computed specifier so Vite/tsc never resolve the uninstalled package; install cmd documented: npx expo install expo-secure-store), platform.ts (isNativePlatform via navigator.product==='ReactNative' with window-absent fallback; createTokenStorage factory), useAuthStorage.ts (useMemo-stable hook), index.ts barrel. Tests: webTokenStorage.test.ts (10), platform.test.ts (4), plus added nativeTokenStorage.test.ts (7, mocks expo-secure-store virtually), useAuthStorage.test.ts (3), index.test.ts (1) to meet the repo-enforced 80% coverage threshold. VERIFICATION: `npm run test -- --run src/features/auth/storage` -> 25/25 pass; scoped coverage 100% stmts/funcs/lines, 96.29% branches (only uncovered branch is platform.ts window-undefined fallback, not reachable under jsdom); `npm run lint` clean; typecheck shows ZERO errors in features/auth/storage. KNOWN BRANCH STATE (pre-existing, not from this feature): full `npm run typecheck` and `npm run build` fail because Module-2 src/domain imports the @energy alias / src/features/energy/domain which is absent on feat/modulo-2-macros-wizard (confirmed via esbuild probe that the storage module bundles cleanly and expo-secure-store stays an unresolved runtime import). Did NOT add expo-secure-store to package.json. Branch base is feat/modulo-2-macros-wizard per orchestrator; committed there."
+}
