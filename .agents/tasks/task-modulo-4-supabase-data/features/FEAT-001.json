@@ -1,0 +1,28 @@
+{
+  "id": "FEAT-001",
+  "type": "chore",
+  "description": "Environment setup + dependencies + secret-safe config. Install @supabase/supabase-js and @tanstack/react-query, add the Supabase client initialized ONLY from VITE_ env vars with a clear thrown error on missing vars, add .env.example (empty values), and update .gitignore to ignore .env/.env.* while keeping !.env.example. Confirm a green baseline (typecheck/lint/build/tests) with the energy domain temporarily materialized from main (not committed) so the full suite resolves the @energy alias. Independent of FEAT-002/003 only in that it must come first (they depend on the client).",
+  "status": "completed",
+  "steps": [
+    "From apps/macros-web run: npm install @supabase/supabase-js @tanstack/react-query  (this updates package.json + package-lock.json).",
+    "Add apps/macros-web/src/lib/env.ts: a tiny pure helper readSupabaseEnv() that reads import.meta.env.VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY, throws a clear Error naming the missing variable(s) when absent/empty, and returns a frozen { url, anonKey } object. NO any; type import.meta.env via src/vite-env.d.ts (add an ImportMetaEnv interface declaring the two VITE_ vars as string).",
+    "Add apps/macros-web/src/lib/supabaseClient.ts: create the typed SupabaseClient<Database> via createClient(url, anonKey) using readSupabaseEnv(). Export a lazy getSupabaseClient() singleton (module-level memoized) so missing-env throws only when the client is first used, keeping tests able to inject a mock. Comment the auth seam: the client reads the session/user via supabase.auth.getUser(); the auth module submit stub (useAuthSubmit.ts) is where the real sign-in will later populate this session.",
+    "Add apps/macros-web/.env.example with empty VITE_SUPABASE_URL= and VITE_SUPABASE_ANON_KEY= plus a comment that the anon key is public-by-design but real keys/service_role keys must never be committed.",
+    "Update apps/macros-web/.gitignore: add lines `.env` and `.env.*` and `!.env.example` (keep existing node_modules/dist/coverage/test-results/playwright-report/*.log).",
+    "Materialize energy domain for verification only: from repo root run `git checkout main -- src/features/energy/domain` (do NOT commit it), then run the baseline verification; remove it afterward with `git rm -r --cached` is NOT needed since it was never added — just `rm -rf src/features/energy/domain` or `git checkout feat/modulo-3-auth -- .` is unnecessary; simply delete the untracked dir."
+  ],
+  "acceptance_criteria": [
+    "package.json lists @supabase/supabase-js and @tanstack/react-query as dependencies and npm install succeeds.",
+    "Importing supabaseClient with both VITE_ vars unset throws a clear Error that names the missing variable(s) and does not leak values.",
+    "apps/macros-web/.env.example exists with empty values; .gitignore ignores .env and .env.* but not .env.example (git check-ignore confirms).",
+    "cd apps/macros-web && npm run typecheck && npm run lint && npm run build all pass (with energy domain temporarily materialized for the alias)."
+  ],
+  "verification": [
+    "cd apps/macros-web && npm run typecheck",
+    "cd apps/macros-web && npm run lint",
+    "cd apps/macros-web && npm run build",
+    "git check-ignore apps/macros-web/.env && ! git check-ignore apps/macros-web/.env.example"
+  ],
+  "blocked_reason": null,
+  "findings": "Done. Installed @supabase/supabase-js + @tanstack/react-query (package.json/package-lock.json updated; npm install clean, 105 pkgs added). Created apps/macros-web/src/lib/env.ts (pure readSupabaseEnv() -> frozen {url,anonKey}, trims values, throws a clear Error naming every missing/empty VITE_ var without leaking values), apps/macros-web/src/lib/supabaseClient.ts (lazy memoized getSupabaseClient() singleton; auth seam documented pointing to useAuthSubmit.ts; left ungeneric with explicit TODO(FEAT-002) to parameterize SupabaseClient<Database> once src/data/database.types.ts exists -- no `any`), apps/macros-web/.env.example (empty VITE_ vars + anon-key-public/service_role-never-commit comment), and updated src/vite-env.d.ts (ImportMetaEnv with both VITE_ vars as string) and .gitignore (added .env, .env.*, !.env.example; kept node_modules/dist/coverage/test-results/playwright-report/*.log).\n\nVerification (energy domain temporarily materialized from main via `git checkout main -- src/features/energy/domain`, then removed and unstaged -- NOT committed): typecheck PASS, lint PASS (no-console clean), build PASS (vite built in ~7s), tests PASS (13 files / 95 tests). git check-ignore apps/macros-web/.env matches (ignored); .env.example NOT ignored (trackable). IMPORTANT GOTCHA for later features: `git checkout main -- <path>` STAGES the files into the index; `rm -rf` alone does not unstage them -- you must also run `git restore --staged src/features/energy` before committing or the energy domain leaks into the commit. Verified HEAD contains no src/features/energy. Committed as 38a73e2 on feat/modulo-3-auth. Did not push."
+}
