@@ -28,4 +28,10 @@ export const COPY = Object.freeze({
     password: 'Tu contraseña',
     confirmPassword: 'Repite tu contraseña',
   }),
+  session: Object.freeze({
+    signOut: 'Cerrar sesión',
+    goalLoading: 'Cargando tu meta de macros...',
+    goalActive: 'Tienes una meta de macros activa.',
+    goalEmpty: 'Aún no has guardado una meta de macros.',
+  }),
 });

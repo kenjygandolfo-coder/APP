@@ -1,6 +1,5 @@
 import { useCallback, useState } from 'react';
 
-import { useAuthStorage } from './storage';
 import type { AuthLogger, AuthSubmitHandler, Credentials } from './types';
 import { noopAuthLogger, redactCredentials } from './types';
 
@@ -19,10 +18,13 @@ interface UseAuthSubmitResult<T> {
 }
 
 /**
- * Shared submit behaviour for the Login and Registro forms. Logs ONLY the
- * redacted credentials, persists a dev placeholder session token through the
- * platform storage (FEAT-001), then flags success. The raw password never
- * leaves this flow. Swap `onSubmit` for the real API/Supabase call later.
+ * Shared submit behaviour for the Login and Registro forms. The default path
+ * ONLY emits the redacted credentials to the injectable logger; the real
+ * backend call lives in the injected `onSubmit` (wired to Supabase Auth via
+ * useAuthActions). The raw password never leaves this flow.
+ *
+ * SESSION PERSISTENCE: supabase-js owns session persistence (localStorage on
+ * web via its own auth storage), so this hook deliberately writes NO token.
  */
 export function useAuthSubmit<T extends Credentials>({
   label,
@@ -31,18 +33,16 @@ export function useAuthSubmit<T extends Credentials>({
   logger = noopAuthLogger,
   onSuccess,
 }: UseAuthSubmitArgs<T>): UseAuthSubmitResult<T> {
-  const storage = useAuthStorage();
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const defaultSubmit = useCallback(
     async (values: T): Promise<void> => {
+      // Redacted logging only (never the raw password). The real backend call
+      // is supplied through `onSubmit`.
       logger(label, redactCredentials(values));
-      // Dev placeholder only: NOT a secret. Replaced by the real JWT once the
-      // API/Supabase call is wired into `onSubmit`.
-      await storage.saveToken(`session-${Date.now()}`);
     },
-    [label, logger, storage],
+    [label, logger],
   );
 
   const handleSubmit = useCallback(
@@ -53,8 +53,8 @@ export function useAuthSubmit<T extends Credentials>({
         setSubmitted(true);
         onSuccess?.();
       } catch {
-        // Surface a friendly, non-leaky message; the underlying error detail is
-        // intentionally not shown to avoid exposing storage internals.
+        // Surface a friendly, non-leaky message; the underlying provider error
+        // detail is intentionally not shown to avoid leaking auth internals.
         setSubmitError(errorMessage);
       }
     },

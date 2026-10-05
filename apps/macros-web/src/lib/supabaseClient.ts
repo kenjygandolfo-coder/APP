@@ -7,12 +7,11 @@ import { readSupabaseEnv } from './env';
  * Supabase client singleton for the web app.
  *
  * Auth seam: the client reads the current session/user via
- * `supabase.auth.getUser()` (and `supabase.auth.getSession()`). Today the auth
- * submit flow in `src/features/auth/useAuthSubmit.ts` is still a stub that
- * persists a dev placeholder token; that stub is the exact seam where the real
- * Supabase sign-in (e.g. `supabase.auth.signInWithPassword`) will later be
- * wired in to populate this session. Once that happens, Row Level Security on
- * the data tables uses `auth.uid()` from the session established here.
+ * `supabase.auth.getUser()` (and `supabase.auth.getSession()`). The auth submit
+ * flow (`src/features/auth/useAuthActions.ts`) calls
+ * `supabase.auth.signInWithPassword` / `signUp` on this client, and supabase-js
+ * owns session persistence (localStorage on web). Row Level Security on the
+ * data tables uses `auth.uid()` from the session established here.
  *
  * The client is parameterized with {@link Database} (the strict hand-written
  * schema in `src/data/database.types.ts`) so every query is fully typed with

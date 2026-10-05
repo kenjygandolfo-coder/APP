@@ -1,4 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 
 import { AuthField } from './components/AuthField';
@@ -11,6 +12,7 @@ import {
   type RegisterValues,
 } from './schemas/auth.schema';
 import type { AuthLogger, AuthSubmitHandler } from './types';
+import { makeRegisterSubmit } from './useAuthActions';
 import { useAuthSubmit } from './useAuthSubmit';
 
 interface RegisterFormProps {
@@ -22,7 +24,9 @@ interface RegisterFormProps {
 /**
  * Registro screen. Mirrors LoginForm with a third confirmPassword field; the
  * cross-field mismatch error ('Las contraseñas no coinciden.') is mapped by the
- * schema refine onto confirmPassword and rendered there by react-hook-form.
+ * schema refine onto confirmPassword and rendered there by react-hook-form. By
+ * default the submit flow calls the real Supabase sign-up (useAuthActions,
+ * which drops confirmPassword); `onSubmit` stays injectable for tests.
  */
 export function RegisterForm({
   onSubmit,
@@ -39,11 +43,15 @@ export function RegisterForm({
     defaultValues: registerDefaults,
   });
 
+  // Default to the real Supabase sign-up; tests inject a mock `onSubmit`.
+  const submit = useMemo(() => onSubmit ?? makeRegisterSubmit(), [onSubmit]);
+
   const { submitted, submitError, handleSubmit: onValid } =
     useAuthSubmit<RegisterValues>({
       label: 'register',
-      errorMessage: 'No se pudo crear la cuenta. Inténtalo de nuevo.',
-      onSubmit,
+      errorMessage:
+        'No se pudo crear la cuenta. Verifica tus datos e inténtalo de nuevo.',
+      onSubmit: submit,
       logger,
       onSuccess,
     });

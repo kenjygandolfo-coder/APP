@@ -1,4 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 
 import { AuthField } from './components/AuthField';
@@ -11,6 +12,7 @@ import {
   type LoginValues,
 } from './schemas/auth.schema';
 import type { AuthLogger, AuthSubmitHandler } from './types';
+import { makeLoginSubmit } from './useAuthActions';
 import { useAuthSubmit } from './useAuthSubmit';
 
 interface LoginFormProps {
@@ -20,9 +22,10 @@ interface LoginFormProps {
 }
 
 /**
- * Login screen. react-hook-form + zodResolver drive validation; the submit flow
- * is injectable (`onSubmit`) and ready for the real API/Supabase call. Only
- * redacted credentials are ever logged.
+ * Login screen. react-hook-form + zodResolver drive validation; by default the
+ * submit flow calls the real Supabase sign-in (useAuthActions), while `onSubmit`
+ * stays injectable for tests. Only redacted credentials are ever logged, and
+ * the friendly Spanish error below never leaks provider text.
  */
 export function LoginForm({
   onSubmit,
@@ -39,11 +42,14 @@ export function LoginForm({
     defaultValues: loginDefaults,
   });
 
+  // Default to the real Supabase sign-in; tests inject a mock `onSubmit`.
+  const submit = useMemo(() => onSubmit ?? makeLoginSubmit(), [onSubmit]);
+
   const { submitted, submitError, handleSubmit: onValid } =
     useAuthSubmit<LoginValues>({
       label: 'login',
-      errorMessage: 'No se pudo iniciar sesión. Inténtalo de nuevo.',
-      onSubmit,
+      errorMessage: 'No se pudo iniciar sesión. Revisa tu correo y contraseña.',
+      onSubmit: submit,
       logger,
       onSuccess,
     });
