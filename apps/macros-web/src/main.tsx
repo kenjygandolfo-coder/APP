@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { QueryProvider } from './app/QueryProvider';
+import { SessionProvider } from './app/SessionProvider';
 import App from './App';
 import './index.css';
 
@@ -13,8 +14,10 @@ if (!rootElement) {
 
 createRoot(rootElement).render(
   <StrictMode>
-    <QueryProvider>
-      <App />
-    </QueryProvider>
+    <SessionProvider>
+      <QueryProvider>
+        <App />
+      </QueryProvider>
+    </SessionProvider>
   </StrictMode>,
 );

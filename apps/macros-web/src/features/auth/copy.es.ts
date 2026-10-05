@@ -17,6 +17,8 @@ export const COPY = Object.freeze({
     submit: 'Crear cuenta',
     switchPrompt: '¿Ya tienes cuenta? Inicia sesión',
     success: '¡Cuenta creada con éxito!',
+    confirmEmail:
+      '¡Cuenta creada! Revisa tu correo para confirmar tu cuenta antes de iniciar sesión.',
   }),
   fields: Object.freeze({
     email: 'Correo electrónico',
@@ -27,5 +29,11 @@ export const COPY = Object.freeze({
     email: 'tucorreo@ejemplo.com',
     password: 'Tu contraseña',
     confirmPassword: 'Repite tu contraseña',
+  }),
+  session: Object.freeze({
+    signOut: 'Cerrar sesión',
+    goalLoading: 'Cargando tu meta de macros...',
+    goalActive: 'Tienes una meta de macros activa.',
+    goalEmpty: 'Aún no has guardado una meta de macros.',
   }),
 });

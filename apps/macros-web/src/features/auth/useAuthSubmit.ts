@@ -1,15 +1,20 @@
 import { useCallback, useState } from 'react';
 
-import { useAuthStorage } from './storage';
 import type { AuthLogger, AuthSubmitHandler, Credentials } from './types';
 import { noopAuthLogger, redactCredentials } from './types';
 
-interface UseAuthSubmitArgs<T extends Credentials> {
+interface UseAuthSubmitArgs<T extends Credentials, R = void> {
   readonly label: string;
   readonly errorMessage: string;
-  readonly onSubmit?: AuthSubmitHandler<T>;
+  readonly onSubmit?: AuthSubmitHandler<T, R>;
   readonly logger?: AuthLogger;
   readonly onSuccess?: () => void;
+  /**
+   * Invoked with the handler's resolved result on a successful (non-throwing)
+   * submit, BEFORE `onSuccess`. Lets a form branch on the outcome (e.g. a
+   * sign-up that resolved no session because email confirmation is pending).
+   */
+  readonly onResult?: (result: R) => void;
 }
 
 interface UseAuthSubmitResult<T> {
@@ -19,46 +24,52 @@ interface UseAuthSubmitResult<T> {
 }
 
 /**
- * Shared submit behaviour for the Login and Registro forms. Logs ONLY the
- * redacted credentials, persists a dev placeholder session token through the
- * platform storage (FEAT-001), then flags success. The raw password never
- * leaves this flow. Swap `onSubmit` for the real API/Supabase call later.
+ * Shared submit behaviour for the Login and Registro forms. The default path
+ * ONLY emits the redacted credentials to the injectable logger; the real
+ * backend call lives in the injected `onSubmit` (wired to Supabase Auth via
+ * useAuthActions). The raw password never leaves this flow.
+ *
+ * SESSION PERSISTENCE: supabase-js owns session persistence (localStorage on
+ * web via its own auth storage), so this hook deliberately writes NO token.
  */
-export function useAuthSubmit<T extends Credentials>({
+export function useAuthSubmit<T extends Credentials, R = void>({
   label,
   errorMessage,
   onSubmit,
   logger = noopAuthLogger,
   onSuccess,
-}: UseAuthSubmitArgs<T>): UseAuthSubmitResult<T> {
-  const storage = useAuthStorage();
+  onResult,
+}: UseAuthSubmitArgs<T, R>): UseAuthSubmitResult<T> {
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const defaultSubmit = useCallback(
-    async (values: T): Promise<void> => {
+    async (values: T): Promise<R> => {
+      // Redacted logging only (never the raw password). The real backend call
+      // is supplied through `onSubmit`.
       logger(label, redactCredentials(values));
-      // Dev placeholder only: NOT a secret. Replaced by the real JWT once the
-      // API/Supabase call is wired into `onSubmit`.
-      await storage.saveToken(`session-${Date.now()}`);
+      return undefined as R;
     },
-    [label, logger, storage],
+    [label, logger],
   );
 
   const handleSubmit = useCallback(
     async (values: T): Promise<void> => {
       setSubmitError(null);
       try {
-        await (onSubmit ?? defaultSubmit)(values);
+        const result = await (onSubmit ?? defaultSubmit)(values);
+        // Let the form branch on the result (e.g. pending confirmation) before
+        // flipping to the shared submitted state.
+        onResult?.(result);
         setSubmitted(true);
         onSuccess?.();
       } catch {
-        // Surface a friendly, non-leaky message; the underlying error detail is
-        // intentionally not shown to avoid exposing storage internals.
+        // Surface a friendly, non-leaky message; the underlying provider error
+        // detail is intentionally not shown to avoid leaking auth internals.
         setSubmitError(errorMessage);
       }
     },
-    [defaultSubmit, errorMessage, onSubmit, onSuccess],
+    [defaultSubmit, errorMessage, onResult, onSubmit, onSuccess],
   );
 
   return { submitted, submitError, handleSubmit };

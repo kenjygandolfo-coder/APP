@@ -183,6 +183,30 @@ describe('MacrosWizard', () => {
     expect(logSpy).not.toHaveBeenCalled();
   });
 
+  it('invokes onSave with the computed result when saving', async () => {
+    const onSave = vi.fn();
+    const user = userEvent.setup();
+    render(<MacrosWizard onSave={onSave} />);
+
+    await completeWizard(user, MALE);
+    await screen.findByText(/paso 4 de 4/i);
+
+    const expected = calculateMacros({
+      sex: 'male',
+      ageYears: 30,
+      weightKg: 80,
+      heightCm: 180,
+      activityLevel: 'moderate',
+    } satisfies TdeeInput);
+
+    await user.click(screen.getByRole('button', { name: 'Guardar mis metas' }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave).toHaveBeenCalledWith(expected);
+    // The local confirmation still shows regardless of the persistence sink.
+    expect(screen.getByRole('status')).toHaveTextContent(/guardaron con éxito/i);
+  });
+
   it('navigates back to a previous step', async () => {
     const user = userEvent.setup();
     render(<MacrosWizard />);

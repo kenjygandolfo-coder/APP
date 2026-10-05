@@ -1,14 +1,49 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { render, screen, waitFor } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 
 // Confirms the "@energy" alias resolves the reused portable domain under Vitest.
 import { calculateTdee } from '@energy';
 
+import type { Database } from './data/database.types';
 import App from './App';
+import { QueryProvider } from './app/QueryProvider';
+import { SessionProvider } from './app/SessionProvider';
+
+type Client = SupabaseClient<Database>;
+
+// Mock client so SessionProvider never requires Supabase env; it bootstraps as
+// anonymous and never emits a session.
+function makeMockClient(): Client {
+  return {
+    auth: {
+      getSession: () =>
+        Promise.resolve({ data: { session: null }, error: null }),
+      onAuthStateChange: () => ({
+        data: { subscription: { unsubscribe: vi.fn() } },
+      }),
+    },
+  } as unknown as Client;
+}
+
+// Awaits the async SessionProvider seed (getSession) so the state settles
+// inside `act`, keeping the suite free of React act() warnings.
+async function renderApp(): Promise<void> {
+  render(
+    <SessionProvider client={makeMockClient()}>
+      <QueryProvider>
+        <App />
+      </QueryProvider>
+    </SessionProvider>,
+  );
+  await waitFor(() =>
+    expect(screen.getByText(/paso 1 de 4/i)).toBeInTheDocument(),
+  );
+}
 
 describe('App', () => {
-  it('renders the app title as the top-level heading', () => {
-    render(<App />);
+  it('renders the app title as the top-level heading', async () => {
+    await renderApp();
     expect(
       screen.getByRole('heading', { level: 1, name: /calculadora de macros/i }),
     ).toBeInTheDocument();
@@ -17,8 +52,8 @@ describe('App', () => {
     ).toBeInTheDocument();
   });
 
-  it('renders the macros wizard starting on step 1', () => {
-    render(<App />);
+  it('renders the macros wizard starting on step 1', async () => {
+    await renderApp();
     expect(screen.getByText(/paso 1 de 4/i)).toBeInTheDocument();
     expect(
       screen.getByRole('heading', { name: /sobre ti/i }),

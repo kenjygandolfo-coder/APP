@@ -1,4 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
 import { AuthField } from './components/AuthField';
@@ -11,10 +12,11 @@ import {
   type RegisterValues,
 } from './schemas/auth.schema';
 import type { AuthLogger, AuthSubmitHandler } from './types';
+import { makeRegisterSubmit, type RegisterResult } from './useAuthActions';
 import { useAuthSubmit } from './useAuthSubmit';
 
 interface RegisterFormProps {
-  readonly onSubmit?: AuthSubmitHandler<RegisterValues>;
+  readonly onSubmit?: AuthSubmitHandler<RegisterValues, RegisterResult>;
   readonly onSuccess?: () => void;
   readonly logger?: AuthLogger;
 }
@@ -22,7 +24,9 @@ interface RegisterFormProps {
 /**
  * Registro screen. Mirrors LoginForm with a third confirmPassword field; the
  * cross-field mismatch error ('Las contraseñas no coinciden.') is mapped by the
- * schema refine onto confirmPassword and rendered there by react-hook-form.
+ * schema refine onto confirmPassword and rendered there by react-hook-form. By
+ * default the submit flow calls the real Supabase sign-up (useAuthActions,
+ * which drops confirmPassword); `onSubmit` stays injectable for tests.
  */
 export function RegisterForm({
   onSubmit,
@@ -39,12 +43,23 @@ export function RegisterForm({
     defaultValues: registerDefaults,
   });
 
+  // Default to the real Supabase sign-up; tests inject a mock `onSubmit`.
+  const submit = useMemo(() => onSubmit ?? makeRegisterSubmit(), [onSubmit]);
+
+  // When sign-up returns no session (email confirmation required) the success
+  // screen shows a "revisa tu correo" message instead of implying an active
+  // session; a materialized session flips the SessionProvider via onAuthStateChange.
+  const [pendingConfirmation, setPendingConfirmation] = useState(false);
+
   const { submitted, submitError, handleSubmit: onValid } =
-    useAuthSubmit<RegisterValues>({
+    useAuthSubmit<RegisterValues, RegisterResult>({
       label: 'register',
-      errorMessage: 'No se pudo crear la cuenta. Inténtalo de nuevo.',
-      onSubmit,
+      errorMessage:
+        'No se pudo crear la cuenta. Verifica tus datos e inténtalo de nuevo.',
+      onSubmit: submit,
       logger,
+      onResult: (result) =>
+        setPendingConfirmation(result?.pendingConfirmation ?? false),
       onSuccess,
     });
 
@@ -52,7 +67,9 @@ export function RegisterForm({
     return (
       <FormCard>
         <p role="status" className="text-center font-serif text-xl text-ink">
-          {COPY.register.success}
+          {pendingConfirmation
+            ? COPY.register.confirmEmail
+            : COPY.register.success}
         </p>
       </FormCard>
     );

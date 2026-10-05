@@ -27,9 +27,11 @@ export interface RedactedCredentials {
 
 /**
  * Injectable submit handler. Ready to be swapped for the real API/Supabase
- * call. Receives the already-validated form values.
+ * call. Receives the already-validated form values and may resolve a result
+ * (`R`) the form can branch on (e.g. whether a session actually materialized).
+ * Defaults to `void` so existing void-returning handlers stay compatible.
  */
-export type AuthSubmitHandler<T> = (values: T) => void | Promise<void>;
+export type AuthSubmitHandler<T, R = void> = (values: T) => R | Promise<R>;
 
 /**
  * Injectable logging sink. Receives a human label and the REDACTED credentials.

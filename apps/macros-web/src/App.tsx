@@ -1,12 +1,17 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 
+import type { MacroResult } from './domain';
 import { AuthScreen } from './features/auth/AuthScreen';
+import { SessionPanel } from './features/auth/SessionPanel';
+import { useSession } from './features/auth/useSession';
 import { COPY } from './features/macros-wizard/copy.es';
 import { MacrosWizard } from './features/macros-wizard/MacrosWizard';
 import {
   PrimaryButton,
   SecondaryButton,
 } from './features/macros-wizard/components/Button';
+import { useSaveMacroGoal } from './features/macro-goals/useSaveMacroGoal';
+import { toSaveMacroGoalInput } from './features/macro-goals/toSaveMacroGoalInput';
 
 type View = 'macros' | 'auth';
 
@@ -20,6 +25,24 @@ const AUTH_LABEL = 'Cuenta';
  */
 export default function App(): JSX.Element {
   const [view, setView] = useState<View>('macros');
+  const { userId } = useSession();
+
+  // Real userId from the live session feeds the macro-goal data hooks; the save
+  // mutation is wired into the wizard's save action so an authenticated user
+  // actually persists a goal (the mutation stays inert until a userId exists).
+  const saveMacroGoal = useSaveMacroGoal(userId);
+
+  const handleSaveGoal = useCallback(
+    (result: MacroResult): void => {
+      // Only persist when authenticated; signed-out users keep the local-only
+      // confirmation. Authorization of the write itself is enforced by RLS.
+      if (!userId) {
+        return;
+      }
+      saveMacroGoal.mutate(toSaveMacroGoalInput(userId, result));
+    },
+    [saveMacroGoal, userId],
+  );
 
   const Macros = view === 'macros' ? PrimaryButton : SecondaryButton;
   const Auth = view === 'auth' ? PrimaryButton : SecondaryButton;
@@ -40,7 +63,13 @@ export default function App(): JSX.Element {
         <Auth onClick={() => setView('auth')}>{AUTH_LABEL}</Auth>
       </nav>
 
-      {view === 'macros' ? <MacrosWizard /> : <AuthScreen />}
+      <SessionPanel />
+
+      {view === 'macros' ? (
+        <MacrosWizard onSave={handleSaveGoal} />
+      ) : (
+        <AuthScreen />
+      )}
     </main>
   );
 }
