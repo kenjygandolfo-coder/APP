@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply font-sans text-ink antialiased;
+    background-color: theme('colors.cream');
+    /* Very subtle dot pattern using the sage accent at low opacity. */
+    background-image: radial-gradient(
+      rgba(138, 154, 91, 0.12) 1px,
+      transparent 1px
+    );
+    background-size: 22px 22px;
+    min-height: 100vh;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-card border border-cardBorder bg-card p-8 shadow-sm;
+    backdrop-filter: blur(6px);
+  }
+}

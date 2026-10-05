@@ -1,0 +1,15 @@
+{
+  "task_id": "task-modulo-2-macros-wizard",
+  "task_description": "Módulo 2: interactive Macros Calculator as a step-by-step Wizard. Deliver a NEW Vite + React 18 + Tailwind CSS web module at apps/macros-web (real DOM React) that reuses the portable pure energy domain (calculateTdee, revised Harris-Benedict 1984). react-hook-form + zod single-form wizard across 4 screens (gender/age, weight/height, activity, results). Results show calorie target + macro grams. 'Guardar mis metas' = state-driven success (no console.log); 'Corregir datos' = back to step 1 without losing data. Enchanted/Cozy design encoded as Tailwind theme tokens. No backend/DB. TDD, 80%+ coverage, unit+integration+E2E.",
+  "status": "completed",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003"],
+  "blocked_reason": null,
+  "proposed_branch": "feat/modulo-2-macros-wizard",
+  "verification": {
+    "build": "pass",
+    "tests": "pass",
+    "test_quality": "pass",
+    "docker_build": "skipped",
+    "summary": "From apps/macros-web: typecheck clean, eslint clean (no-console enforced), vitest 52/52 passed with 98.91% stmts / 90% branch / 100% funcs coverage (domain 100%), vite build produced dist/. Playwright E2E 2/2 passed in real chromium. Test quality verified: integration tests drive the wizard via user-event, compute expected calorie/macro numbers through calculateMacros (not hardcoded), assert data preservation on 'Corregir datos', assert state-driven success banner with console.log spy not called, and assert per-step validation gating. No Dockerfile in the web module (docker build not applicable). Root Expo app untouched."
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "project_type": "Monorepo: existing Expo/React Native app (APP) + NEW Vite + React 18 + Tailwind CSS web module (apps/macros-web). The web module is a real DOM React app where Tailwind CSS, <select>/<input>, backdrop-blur and Google Fonts render natively.",
+  "language": "TypeScript (strict)",
+  "build_system": "Root Expo app uses expo/metro + jest-expo. NEW web module uses Vite (build/dev), Vitest (unit/integration), Playwright (E2E). npm as package manager (package-lock.json present).",
+  "test_framework": "Web module: Vitest + @testing-library/react + jsdom for unit/integration; Playwright for E2E. Root app: jest-expo (untouched).",
+  "build_command": "cd apps/macros-web && npm run build",
+  "test_command": "cd apps/macros-web && npm run test -- --run",
+  "verification_instructions": "In apps/macros-web: `npm install`, then `npm run test -- --run` (unit+integration via Vitest), `npm run build` (tsc + vite build), `npm run typecheck`, `npm run lint`. E2E: `npm run build` then `npm run test:e2e` (Playwright serves the dist). Pure macro-math suite must pass with high coverage; wizard integration tests cover navigation + per-step validation gating.",
+  "snapshot_or_generated_files": "None checked in. Vite build output goes to apps/macros-web/dist (gitignored). Coverage reports gitignored.",
+  "setup_instructions": "Node 20+ (v22 present). From repo root: `cd apps/macros-web && npm install`. Dev: `npm run dev` (Vite on http://localhost:5173). No env vars, no secrets, no backend.",
+  "environment_constraints": "OPEN_INTERNET: npm installs, create-vite deps, and Google Fonts all reachable. Playwright chromium may need `npx playwright install chromium`. The root Expo app is React Native where Tailwind CSS does NOT apply, which is WHY a separate DOM web module is required.",
+  "contribution_requirements": "Conventional commits. ESLint no-console (error) => 'Guardar mis metas' must be a state-driven success UI, NOT console.log. Immutability, small files (<800 lines, functions <50 lines), zod validation of all input, no hardcoded secrets. Min 80% coverage with unit+integration+E2E.",
+  "key_patterns": "Pure domain logic lives in src/features/energy/domain/{energyCalculator,energy.schema,activityLevels,harrisBenedict.constants,CalculationInputError}.ts and is plain TS (no RN imports) => portable. REUSE calculateTdee (revised Harris-Benedict 1984; multipliers 1.2/1.375/1.55/1.725/1.9) rather than reimplementing. Feature-based folders. Design tokens centralized (src/theme in RN app => tailwind.config theme.extend for web).",
+  "relevant_files": [
+    "src/features/energy/domain/energyCalculator.ts (REUSE: calculateTdee)",
+    "src/features/energy/domain/energy.schema.ts (REUSE: tdeeInputSchema, SEXES, ACTIVITY_LEVELS basis)",
+    "src/features/energy/domain/activityLevels.ts (REUSE: ACTIVITY_LEVELS, ACTIVITY_MULTIPLIERS, ACTIVITY_LABELS_ES)",
+    "src/features/energy/domain/harrisBenedict.constants.ts (REUSE: SEXES, INPUT_LIMITS)",
+    "src/features/energy/__tests__/energyCalculator.test.ts (pattern to mirror for macro math tests)",
+    "CLAUDE.md (project rules)",
+    ".tasks/01-modulo-1-plan.md (prior module plan style)"
+  ],
+  "directory_structure": "APP/app (Expo routes), APP/src/features/{welcome,energy}, APP/src/theme, APP/.tasks (plan markdown). NEW: APP/apps/macros-web/ (Vite web module) with src/{domain,features/macros-wizard,theme}, config files, tests."
+}
