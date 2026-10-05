@@ -1,0 +1,28 @@
+{
+  "project_type": "Monorepo: Expo/React Native root app (Module 1 energy domain, now merged to main) + Vite + React 18 + Tailwind CSS web module at apps/macros-web (Module 2). The web module is a real DOM React app where Tailwind CSS, <input>/<select>, backdrop-blur and Google Fonts render natively. Module 3 (Auth: Login + Registro) is built inside apps/macros-web, reusing its design tokens and UI primitives.",
+  "language": "TypeScript (strict)",
+  "build_system": "Web module uses Vite (build/dev), Vitest (unit/integration), Playwright (E2E). npm as package manager (package-lock.json present). Root Expo app uses expo/metro + jest-expo (untouched by this module).",
+  "test_framework": "Vitest + @testing-library/react + @testing-library/user-event + jsdom for unit/integration; Playwright for E2E. Coverage via @vitest/coverage-v8 with 80% thresholds already enforced in vitest.config.ts.",
+  "build_command": "cd apps/macros-web && npm run build",
+  "test_command": "cd apps/macros-web && npm run test -- --run",
+  "verification_instructions": "In apps/macros-web: npm install, then npm run test -- --run (unit+integration via Vitest), npm run typecheck (tsc --noEmit, strict), npm run lint (eslint, no-console=error), npm run build (tsc + vite build). E2E: npm run test:e2e (Playwright builds+previews dist). NOTE: the pre-existing MacrosWizard/App/domain tests import the Module-1 energy domain via the @energy alias; on a branch where src/features/energy/domain is absent those specific suites fail to resolve @energy. The Module 3 auth suites are self-contained (no @energy dependency) and pass independently. Base Module 3 on a branch that contains BOTH the energy domain and the macros-web module so the full suite is green.",
+  "snapshot_or_generated_files": "None checked in. Vite build output to apps/macros-web/dist (gitignored). Coverage reports gitignored.",
+  "setup_instructions": "Node 20+ (v22.23.3 present). From repo root: cd apps/macros-web && npm install. Dev: npm run dev (Vite on http://localhost:5173). No env vars, no secrets, no backend. react-hook-form@7.53, @hookform/resolvers@3.9, zod@3.25 already installed.",
+  "environment_constraints": "OPEN_INTERNET: npm installs and Google Fonts reachable. Playwright chromium already installed (used by Module 2 E2E). expo-secure-store is NOT installed in the web module and is NOT needed there; it is the native path for the separate Expo app and is delivered as a documented, lint-safe implementation guarded so it never executes under the web bundle. Tailwind CSS only renders in this DOM web module, not in the React Native root app.",
+  "contribution_requirements": "Conventional commits. ESLint no-console (error): submit handlers must route the 'validated data log' through an injectable onSubmit/logger callback (default logs a REDACTED shape, never the raw password) so lint stays green; no inline console.log in committed code. Immutability, small files (<800 lines, functions <50 lines), zod validation of all input, no hardcoded secrets. Min 80% coverage with unit+integration+E2E.",
+  "key_patterns": "Design tokens centralized in tailwind.config.ts (cream/sage/pink/ink/muted/card/cardBorder, font-serif=Playfair, font-sans=Montserrat, rounded-card=16px). Reuse UI primitives in src/features/macros-wizard/components (PrimaryButton/SecondaryButton, FormCard, TextField). Zod + zodResolver + react-hook-form is the established form pattern (see wizard.schema.ts + MacrosWizard.tsx). Spanish copy frozen via Object.freeze (copy.es.ts). Error text rendered with role='alert', aria-invalid/aria-describedby wiring on fields.",
+  "relevant_files": [
+    "apps/macros-web/tailwind.config.ts (REUSE design tokens, do not re-hardcode hex)",
+    "apps/macros-web/src/features/macros-wizard/components/Button.tsx (REUSE PrimaryButton/SecondaryButton)",
+    "apps/macros-web/src/features/macros-wizard/components/FormCard.tsx (REUSE translucent card)",
+    "apps/macros-web/src/features/macros-wizard/components/TextField.tsx (pattern for password/email inputs; extend for type=email/password)",
+    "apps/macros-web/src/features/macros-wizard/wizard.schema.ts (zod + RHF pattern to mirror)",
+    "apps/macros-web/src/features/macros-wizard/MacrosWizard.tsx (FormProvider/useForm/zodResolver usage)",
+    "apps/macros-web/src/features/macros-wizard/copy.es.ts (frozen Spanish copy pattern)",
+    "apps/macros-web/src/App.tsx (entry/routing to wire the auth screens)",
+    "apps/macros-web/vitest.config.ts (coverage thresholds, jsdom env)",
+    "apps/macros-web/eslint.config.js (no-console=error)",
+    "apps/macros-web/e2e/wizard.spec.ts (Playwright pattern to mirror for auth E2E)"
+  ],
+  "directory_structure": "apps/macros-web/src/{domain,features/macros-wizard,test}. NEW for Module 3: src/features/auth/{storage (secure storage abstraction + web + native impls + platform selection + useAuthStorage hook), schemas (zod login/registro), components (shared email/password fields), LoginForm.tsx, RegisterForm.tsx, AuthScreen.tsx, copy.es.ts, __tests__}. A tiny view-switcher wires Login/Registro into App.tsx (no react-router dependency added)."
+}
