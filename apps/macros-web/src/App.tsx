@@ -12,11 +12,15 @@ import {
 } from './features/macros-wizard/components/Button';
 import { useSaveMacroGoal } from './features/macro-goals/useSaveMacroGoal';
 import { toSaveMacroGoalInput } from './features/macro-goals/toSaveMacroGoalInput';
+import { DailyDashboard } from './features/food-logs/DailyDashboard';
+import { ManualFoodForm } from './features/food-logs/ManualFoodForm';
 
-type View = 'macros' | 'auth';
+type View = 'macros' | 'auth' | 'diario';
 
 const MACROS_LABEL = 'Calculadora de macros';
 const AUTH_LABEL = 'Cuenta';
+const DIARIO_LABEL = 'Diario';
+const DIARIO_SIGNED_OUT = 'Inicia sesión para ver tu diario de hoy.';
 
 /**
  * Root of the web module. A minimal top-level view switch (no react-router)
@@ -46,6 +50,21 @@ export default function App(): JSX.Element {
 
   const Macros = view === 'macros' ? PrimaryButton : SecondaryButton;
   const Auth = view === 'auth' ? PrimaryButton : SecondaryButton;
+  const Diario = view === 'diario' ? PrimaryButton : SecondaryButton;
+
+  // The daily food diary (dashboard + manual entry) only makes sense for an
+  // authenticated user, so render it behind a real `userId`, mirroring the
+  // SessionPanel's authenticated-only guard. The diary nav button is always
+  // visible; selecting it while signed out falls back to a friendly prompt.
+  const renderDiario = (): JSX.Element =>
+    userId ? (
+      <div className="flex w-full flex-col items-center gap-6">
+        <DailyDashboard userId={userId} />
+        <ManualFoodForm userId={userId} />
+      </div>
+    ) : (
+      <p className="text-center text-sm text-muted">{DIARIO_SIGNED_OUT}</p>
+    );
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-cream p-4">
@@ -60,6 +79,7 @@ export default function App(): JSX.Element {
 
       <nav className="flex items-center gap-3" aria-label="Secciones">
         <Macros onClick={() => setView('macros')}>{MACROS_LABEL}</Macros>
+        <Diario onClick={() => setView('diario')}>{DIARIO_LABEL}</Diario>
         <Auth onClick={() => setView('auth')}>{AUTH_LABEL}</Auth>
       </nav>
 
@@ -67,6 +87,8 @@ export default function App(): JSX.Element {
 
       {view === 'macros' ? (
         <MacrosWizard onSave={handleSaveGoal} />
+      ) : view === 'diario' ? (
+        renderDiario()
       ) : (
         <AuthScreen />
       )}
