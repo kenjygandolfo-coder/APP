@@ -3,26 +3,11 @@ import { useMacroGoal } from '../macro-goals/useMacroGoal';
 import { MacroProgressBar } from './components/MacroProgressBar';
 import { COPY } from './copy.es';
 import { summarizeDailyMacros } from './summarizeDailyMacros';
+import { localToday } from './today';
 import { useDailyFoodLogs } from './useDailyFoodLogs';
 
 interface DailyDashboardProps {
   readonly userId: string;
-}
-
-/**
- * Today's local calendar date as a `yyyy-mm-dd` string.
- *
- * We deliberately build the string from the LOCAL date parts rather than
- * `Date#toISOString()` (which is UTC) so a log made late at night is not
- * attributed to the next/previous day for users west/east of UTC. The month
- * and day are zero-padded to keep the DB `logged_on` format stable.
- */
-function localToday(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
 }
 
 /**

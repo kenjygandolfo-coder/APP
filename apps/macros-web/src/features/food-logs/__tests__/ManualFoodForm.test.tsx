@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 
 import { COPY } from '../copy.es';
 import { ManualFoodForm } from '../ManualFoodForm';
+import { localToday } from '../today';
 import type { AddFoodLogInput, FoodLog } from '../types';
 
 type MutateOptions = {
@@ -76,12 +77,32 @@ describe('ManualFoodForm', () => {
       protein_g: 31,
       fat_g: 3.6,
       carbs_g: 0,
+      logged_on: localToday(),
     });
     // Numeric fields must be real numbers, not strings.
     expect(typeof payload.calories).toBe('number');
     expect(typeof payload.protein_g).toBe('number');
     expect(typeof payload.fat_g).toBe('number');
     expect(typeof payload.carbs_g).toBe('number');
+  });
+
+  it('stamps logged_on with the shared local-today helper so write and read agree', async () => {
+    const user = userEvent.setup();
+    render(<ManualFoodForm userId={USER_ID} />);
+
+    await fillValidFields(user);
+    await user.click(screen.getByRole('button', { name: COPY.form.submit }));
+
+    await waitFor(() => expect(mutationState.mutate).toHaveBeenCalledTimes(1));
+    const call = mutationState.mutate.mock.calls[0];
+    if (!call) {
+      throw new Error('mutate was not called');
+    }
+    const [payload] = call;
+    // The payload date must equal exactly what the dashboard uses to query, so
+    // the inserted row's logged_on matches the subscribed invalidation key.
+    expect(payload.logged_on).toBe(localToday());
+    expect(payload.logged_on).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
   it('clears the inputs after a successful save (reset via onSuccess)', async () => {

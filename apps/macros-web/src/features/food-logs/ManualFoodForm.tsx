@@ -11,6 +11,7 @@ import {
   foodLogSchema,
   type FoodFormValues,
 } from './schemas/foodLog.schema';
+import { localToday } from './today';
 import type { AddFoodLogInput } from './types';
 import { useAddFoodLog } from './useAddFoodLog';
 
@@ -25,7 +26,9 @@ interface ManualFoodFormProps {
  * cleared (reset) so the next item can be logged immediately.
  *
  * Manual entry only: no AI search or external product database. quantity/unit
- * defaults are applied by the data layer, so the form never asks for them.
+ * defaults are applied by the data layer, so the form never asks for them. The
+ * form stamps `logged_on` with the shared {@link localToday} helper so the new
+ * row lands on the same local date the dashboard reads (see today.ts).
  */
 export function ManualFoodForm({ userId }: ManualFoodFormProps): JSX.Element {
   const {
@@ -52,6 +55,12 @@ export function ManualFoodForm({ userId }: ManualFoodFormProps): JSX.Element {
       protein_g: values.protein_g,
       fat_g: values.fat_g,
       carbs_g: values.carbs_g,
+      // Stamp the SAME local calendar date the dashboard queries so the
+      // inserted row's `logged_on` matches the subscribed query key. Without
+      // this the DB fills `logged_on` with `current_date` (UTC), which can
+      // disagree with the browser-local day for off-UTC users and leave a
+      // freshly logged item invisible until the clocks line up.
+      logged_on: localToday(),
     };
     mutation.mutate(input, {
       onSuccess: () =>
