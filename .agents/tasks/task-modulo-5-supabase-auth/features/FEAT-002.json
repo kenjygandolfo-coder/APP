@@ -1,0 +1,27 @@
+{
+  "id": "FEAT-002",
+  "type": "feat",
+  "description": "Create a session hook + provider that exposes the current session/user/userId and a loading status, backed by supabase.auth.getSession() plus an onAuthStateChange subscription (with proper unsubscribe cleanup). Mount the provider at the app root alongside QueryClientProvider. Add unit tests with a mocked client.",
+  "status": "in_progress",
+  "steps": [
+    "Create apps/macros-web/src/features/auth/sessionContext.ts (or a .tsx) defining the context value type SessionState { readonly session: Session | null; readonly user: User | null; readonly userId: string | null; readonly status: 'loading' | 'authenticated' | 'anonymous'; } and a React context created with a safe default. Use SDK types Session/User; no `any`.",
+    "Create apps/macros-web/src/app/SessionProvider.tsx: a provider that (a) on mount calls getCurrentSession(getSupabaseClient()) once to seed state (this is session bootstrap, NOT data fetching), and (b) subscribes via `getSupabaseClient().auth.onAuthStateChange((_event, session) => setState(...))`, returning the subscription so the useEffect cleanup calls `data.subscription.unsubscribe()`. Allow an optional injected client prop (default getSupabaseClient()) so tests pass a mock without env. Derive userId = session?.user?.id ?? null and status accordingly. Keep the effect focused and < 50 lines; use immutable state updates.",
+    "Create apps/macros-web/src/features/auth/useSession.ts exporting useSession(): SessionState that reads the context and throws a clear Error if used outside the provider. Also export a convenience useCurrentUserId(): string | null if helpful.",
+    "Wire the provider in apps/macros-web/src/main.tsx so <SessionProvider> wraps (or sits beside) <QueryProvider> around <App />. Keep it inside StrictMode.",
+    "Create apps/macros-web/src/features/auth/__tests__/useSession.test.tsx using renderHook with a wrapper that renders <SessionProvider client={mockClient}>. Mock client.auth.getSession to resolve an initial session, and client.auth.onAuthStateChange to capture the callback and return `{ data: { subscription: { unsubscribe } } }`. Assert: initial status becomes 'authenticated' with the right userId after getSession resolves; firing the captured onAuthStateChange callback with null flips status to 'anonymous' and userId to null; unmount calls unsubscribe exactly once. No `any` (cast mock as unknown as SupabaseClient<Database>)."
+  ],
+  "acceptance_criteria": [
+    "useSession() exposes { session, user, userId, status } backed by getSession() + onAuthStateChange, with userId null when signed out.",
+    "The onAuthStateChange subscription is unsubscribed on unmount (verified by test).",
+    "SessionProvider is mounted at the app root in main.tsx alongside QueryProvider.",
+    "Running `npx vitest run src/features/auth/__tests__/useSession.test.tsx` passes (initial getSession, reacts to auth state change, unsubscribes on unmount).",
+    "typecheck and lint pass (no any, no console)."
+  ],
+  "verification": [
+    "cd apps/macros-web && npx vitest run src/features/auth/__tests__/useSession.test.tsx",
+    "cd apps/macros-web && npm run typecheck",
+    "cd apps/macros-web && npm run lint"
+  ],
+  "blocked_reason": null,
+  "findings": "Implemented session hook + provider. Files created: src/features/auth/sessionContext.ts (SessionState type, SessionContext with null default, toSessionState helper deriving userId/status), src/features/auth/useSession.ts (useSession throws outside provider, plus useCurrentUserId convenience), src/app/SessionProvider.tsx (seeds via getCurrentSession on mount, subscribes via auth.onAuthStateChange, cleanup calls data.subscription.unsubscribe(); optional injected client prop defaulting to getSupabaseClient(); active flag guards post-unmount setState; effect < 50 lines, immutable updates). Wired <SessionProvider> wrapping <QueryProvider> around <App /> inside StrictMode in main.tsx. Tests in src/features/auth/__tests__/useSession.test.tsx (renderHook + SessionProvider wrapper, mock client cast as unknown as SupabaseClient<Database>, no any): asserts loading->authenticated with correct userId after getSession resolves, flips to anonymous/null on captured onAuthStateChange(null), unsubscribe called exactly once on unmount, and throws outside provider. Verification: vitest run useSession.test.tsx (4 passed), npm run typecheck (clean), npm run lint (clean), npm run build (success). The stderr 'useSession must be used within a <SessionProvider>' line during the test run is the expected thrown error from the out-of-provider test, not a failure. Did NOT create anything under src/features/energy/. Note: FEAT-002 only builds the session plumbing; wiring useAuthSubmit to call real signInWithPassword/signUpWithPassword and consuming userId in useMacroGoal belongs to a separate feature."
+}
