@@ -1,0 +1,14 @@
+{
+  "task_id": "task-modulo-5-supabase-auth",
+  "task_description": "Connect the real Supabase Auth login in apps/macros-web: replace the auth submit stub (placeholder token) with real signInWithPassword/signUp calls, expose the real session/user via a session hook/provider, and feed a real userId into useMacroGoal/useSaveMacroGoal. TypeScript strict (no any), immutability, no console.log, non-leaky error mapping, keep redactCredentials, reuse Enchanted/Cozy design, tests green with >=80% coverage. New branch feat/modulo-5-supabase-auth based on feat/modulo-4-supabase-data (stacked PR).",
+  "status": "completed",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003"],
+  "blocked_reason": null,
+  "verification": {
+    "build": "pass",
+    "tests": "pass",
+    "test_quality": "pass",
+    "docker_build": "skipped",
+    "summary": "From apps/macros-web: npm run typecheck clean; npm run lint clean (0 warnings); npm run test:coverage 148 tests across 26 files all pass, coverage 98.94% lines / 93.21% branches / 94.52% functions (well above 80%); npm run build succeeds (only the pre-existing >500kB chunk advisory). Test quality verified: useAuthActions.test asserts confirmPassword is dropped and errors propagate; auth.data.test asserts non-leaky AuthError mapping; authFlow.integration.test drives a real login through LoginForm, emits the session via onAuthStateChange, and asserts useMacroGoal transitions idle->fetching only once a real userId is present (would fail if the wiring were reverted). No Dockerfile for this web module, so docker_build skipped. No live Supabase project in sandbox: real backend auth cannot run, so tests use a mocked supabase.auth client (documented); no tests deleted to force green. The @energy domain was temporarily materialized at APP/src/features/energy/domain to resolve the alias for pre-existing wizard/App suites and must be removed before finishing (never committed)."
+  }
+}

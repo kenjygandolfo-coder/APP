@@ -1,0 +1,27 @@
+{
+  "id": "FEAT-001",
+  "type": "feat",
+  "description": "Create a thin, pure Supabase Auth data module at apps/macros-web/src/features/auth/auth.data.ts mirroring the macroGoals.data.ts pattern: pure async functions that take an injectable SupabaseClient<Database> and map Supabase AuthError to clear, non-leaky Errors (raw error in `cause`, never in `message`). Add exhaustive unit tests with a mocked supabase.auth.",
+  "status": "completed",
+  "steps": [
+    "Create apps/macros-web/src/features/auth/auth.data.ts. Define `type Client = SupabaseClient<Database>` (import SupabaseClient from '@supabase/supabase-js', Database from '../../data/database.types'). Add a private toClearError(context, error): Error that returns `new Error(`auth: ${context}`, { cause: error })` and NEVER interpolates the raw AuthError message/details.",
+    "Implement async signInWithPassword(client: Client, credentials: { email: string; password: string }): Promise<Session> that calls `client.auth.signInWithPassword({ email, password })`; if `error` is set, throw toClearError('invalid email or password', error); otherwise return `data.session`. Use the SDK's Session type (import type { Session } from '@supabase/supabase-js').",
+    "Implement async signUpWithPassword(client: Client, credentials: { email: string; password: string }): Promise<Session | null> that calls `client.auth.signUp({ email, password })` (map only email+password; the form's confirmPassword is validated in zod and must NOT be forwarded). On error throw toClearError('could not register this account', error). Return data.session (may be null when email confirmation is required; document this).",
+    "Implement async signOut(client: Client): Promise<void> calling `client.auth.signOut()` and throwing toClearError('could not sign out', error) on failure.",
+    "Implement async getCurrentSession(client: Client): Promise<Session | null> calling `client.auth.getSession()` (throw toClearError on error, else return data.session) and getCurrentUser(client: Client): Promise<User | null> calling `client.auth.getUser()` similarly (import type { User }). Keep every function < 50 lines, no `any`, immutable (do not mutate inputs).",
+    "Create apps/macros-web/src/features/auth/__tests__/auth.data.test.ts mirroring macroGoals.data.test.ts. Build a mocked client whose `auth` has vi.fn() for signInWithPassword/signUp/signOut/getSession/getUser. Use a RAW_LEAK string inside a fake AuthError (e.g. { message: 'User already registered super-secret-detail', status: 400, name: 'AuthApiError' }). Cover: success returns the mapped session/user; on AuthError each function throws an Error whose message contains the stable context and does NOT contain the raw leak string; cast the mock via `as unknown as SupabaseClient<Database>`."
+  ],
+  "acceptance_criteria": [
+    "apps/macros-web/src/features/auth/auth.data.ts exports signInWithPassword, signUpWithPassword, signOut, getCurrentSession, getCurrentUser, all taking an injectable client and using SDK types (Session/User/AuthError) with no `any`.",
+    "On AuthError, every function throws an Error whose message contains only a stable context string and never the raw provider message (raw error attached as cause).",
+    "Running `npx vitest run src/features/auth/__tests__/auth.data.test.ts` passes, covering success and non-leaky AuthError mapping for each function.",
+    "`npm run lint` and `npm run typecheck` pass for the new files (no no-console, no any)."
+  ],
+  "verification": [
+    "cd apps/macros-web && npx vitest run src/features/auth/__tests__/auth.data.test.ts",
+    "cd apps/macros-web && npm run typecheck",
+    "cd apps/macros-web && npm run lint"
+  ],
+  "blocked_reason": null,
+  "findings": "Created apps/macros-web/src/features/auth/auth.data.ts with pure async functions (signInWithPassword, signUpWithPassword, signOut, getCurrentSession, getCurrentUser) taking an injectable SupabaseClient<Database>, using SDK types Session/User/AuthError, no any. toClearError(context, error) returns new Error(`auth: ${context}`, { cause: error }) with the raw AuthError only in cause (non-leaky). signUpWithPassword maps only email+password (not confirmPassword) and may return null when email confirmation is required. Added __tests__/auth.data.test.ts (13 tests) mirroring macroGoals.data.test.ts: mocked client.auth with vi.fn()s, success returns the mapped session/user, and on an AuthError every function throws an Error containing only the stable context and NOT the RAW_LEAK string, with the raw error asserted on cause; mock cast via `as unknown as SupabaseClient<Database>`. Verification: `npx vitest run src/features/auth/__tests__/auth.data.test.ts` -> 13 passed; `npm run typecheck` -> clean; `npm run lint` -> clean. Did not create or commit anything under src/features/energy/. No commit/push per orchestrator briefing."
+}
