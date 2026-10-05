@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "FitApp",
+    "slug": "fitapp",
+    "scheme": "fitapp",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "android": { "package": "com.kenjygandolfo.fitapp" },
+    "ios": { "bundleIdentifier": "com.kenjygandolfo.fitapp" },
+    "web": { "bundler": "metro", "output": "single" },
+    "plugins": [
+      "expo-router",
+      ["expo-splash-screen", { "backgroundColor": "#0B0F1A", "imageWidth": 160 }]
+    ],
+    "experiments": { "typedRoutes": true }
+  }
+}
