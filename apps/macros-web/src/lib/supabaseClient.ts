@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
+import type { Database } from '../data/database.types';
 import { readSupabaseEnv } from './env';
 
 /**
@@ -13,12 +14,11 @@ import { readSupabaseEnv } from './env';
  * wired in to populate this session. Once that happens, Row Level Security on
  * the data tables uses `auth.uid()` from the session established here.
  *
- * TODO(FEAT-002): parameterize the client as `SupabaseClient<Database>` once
- * `src/data/database.types.ts` exists. Until then it is left ungeneric so the
- * schema is not invented here (that is FEAT-002's job) and the module compiles
- * with no `any`.
+ * The client is parameterized with {@link Database} (the strict hand-written
+ * schema in `src/data/database.types.ts`) so every query is fully typed with
+ * no `any`.
  */
-let client: SupabaseClient | null = null;
+let client: SupabaseClient<Database> | null = null;
 
 /**
  * Lazily creates and memoizes the Supabase client.
@@ -28,10 +28,10 @@ let client: SupabaseClient | null = null;
  * injecting a mock client into the data-access layer, keeping them free of any
  * real env requirement.
  */
-export function getSupabaseClient(): SupabaseClient {
+export function getSupabaseClient(): SupabaseClient<Database> {
   if (client === null) {
     const { url, anonKey } = readSupabaseEnv();
-    client = createClient(url, anonKey);
+    client = createClient<Database>(url, anonKey);
   }
   return client;
 }
