@@ -162,7 +162,19 @@ export interface Database {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      save_active_macro_goal: {
+        Args: {
+          p_goal_type: GoalType;
+          p_tdee: number;
+          p_calorie_target: number;
+          p_protein_g: number;
+          p_fat_g: number;
+          p_carbs_g: number;
+        };
+        Returns: Database['public']['Tables']['macro_goals']['Row'];
+      };
+    };
     Enums: {
       goal_type: GoalType;
     };

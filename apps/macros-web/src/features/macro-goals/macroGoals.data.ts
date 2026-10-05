@@ -46,36 +46,40 @@ export async function getActiveMacroGoal(
 }
 
 /**
- * Persist a macro goal as the user's single active goal.
+ * Persist a macro goal as the user's single active goal, atomically.
  *
- * Strategy (single-active invariant): first deactivate every currently active
- * goal for the user (`is_active = false`), then insert the new row with
- * `is_active = true`. This keeps exactly one active goal per user and plays
- * nicely with the partial unique index in the migration. The input is never
- * mutated; `is_active` is forced on a fresh object.
+ * Delegates the whole deactivate-then-insert switch to the Postgres RPC
+ * `save_active_macro_goal` (see migration 0002). Running both steps inside one
+ * transaction server-side closes the non-atomic gap of the old two-round-trip
+ * approach: if the insert failed after the deactivate, the user could be left
+ * with no active goal. Ownership is derived server-side from `auth.uid()`, so
+ * this layer passes ONLY the goal fields — never `user_id` or `is_active`; the
+ * client is not trusted to assert ownership. A fresh args object is built from
+ * `input`, so the caller's object is never mutated.
  */
 export async function saveMacroGoal(
   client: Client,
   input: SaveMacroGoalInput,
 ): Promise<MacroGoal> {
-  const { error: deactivateError } = await client
-    .from('macro_goals')
-    .update({ is_active: false })
-    .eq('user_id', input.user_id)
-    .eq('is_active', true);
-
-  if (deactivateError) {
-    throw toClearError('failed to deactivate previous macro goals', deactivateError);
-  }
-
-  const { data, error } = await client
-    .from('macro_goals')
-    .insert({ ...input, is_active: true })
-    .select()
-    .single();
+  const { data, error } = await client.rpc('save_active_macro_goal', {
+    p_goal_type: input.goal_type,
+    p_tdee: input.tdee,
+    p_calorie_target: input.calorie_target,
+    p_protein_g: input.protein_g,
+    p_fat_g: input.fat_g,
+    p_carbs_g: input.carbs_g,
+  });
 
   if (error) {
     throw toClearError('failed to save the macro goal', error);
+  }
+
+  // The RPC always returns the inserted row or raises (surfaced above as
+  // `error`), so a success with no row is not expected. Guard it anyway so the
+  // `Promise<MacroGoal>` signature matches the runtime value and the UI never
+  // receives a silent `null`.
+  if (!data) {
+    throw toClearError('failed to save the macro goal', null);
   }
 
   return data;

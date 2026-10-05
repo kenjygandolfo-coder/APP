@@ -55,29 +55,14 @@ function mockGetterClient(result: SingleResult): Client {
   return { from } as unknown as Client;
 }
 
-interface SaverResults {
-  deactivateError?: typeof postgrestError | null;
-  insert: SingleResult;
-}
-
 /**
- * Mock the saver's two chains:
- * `.from().update().eq().eq()` then `.from().insert().select().single()`.
+ * Mock the saver's single `client.rpc('save_active_macro_goal', args)` call.
+ * The RPC resolves `{ data, error }` just like the real Supabase client.
  */
-function mockSaverClient(results: SaverResults) {
-  const eqActive = vi
-    .fn()
-    .mockResolvedValue({ error: results.deactivateError ?? null });
-  const eqUser = vi.fn().mockReturnValue({ eq: eqActive });
-  const update = vi.fn().mockReturnValue({ eq: eqUser });
-
-  const single = vi.fn().mockResolvedValue(results.insert);
-  const select = vi.fn().mockReturnValue({ single });
-  const insert = vi.fn().mockReturnValue({ select });
-
-  const from = vi.fn().mockReturnValue({ update, insert });
-  const client = { from } as unknown as Client;
-  return { client, update, insert };
+function mockSaverClient(result: SingleResult) {
+  const rpc = vi.fn().mockResolvedValue(result);
+  const client = { rpc } as unknown as Client;
+  return { client, rpc };
 }
 
 describe('getActiveMacroGoal', () => {
@@ -111,21 +96,39 @@ describe('getActiveMacroGoal', () => {
 });
 
 describe('saveMacroGoal', () => {
-  it('deactivates then inserts and returns the saved goal', async () => {
-    const { client, insert } = mockSaverClient({
-      insert: { data: sampleGoal, error: null },
-    });
+  /** The exact args the transactional RPC should receive, derived from input. */
+  const expectedArgs = {
+    p_goal_type: sampleInput.goal_type,
+    p_tdee: sampleInput.tdee,
+    p_calorie_target: sampleInput.calorie_target,
+    p_protein_g: sampleInput.protein_g,
+    p_fat_g: sampleInput.fat_g,
+    p_carbs_g: sampleInput.carbs_g,
+  };
+
+  it('calls the transactional RPC once and returns the saved goal', async () => {
+    const { client, rpc } = mockSaverClient({ data: sampleGoal, error: null });
 
     const saved = await saveMacroGoal(client, sampleInput);
 
     expect(saved).toEqual(sampleGoal);
-    expect(insert).toHaveBeenCalledWith({ ...sampleInput, is_active: true });
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(rpc).toHaveBeenCalledWith('save_active_macro_goal', expectedArgs);
+  });
+
+  it('never sources ownership from the client (no user_id / is_active)', async () => {
+    const { client, rpc } = mockSaverClient({ data: sampleGoal, error: null });
+
+    await saveMacroGoal(client, sampleInput);
+
+    const args = rpc.mock.calls[0]?.[1] as Record<string, unknown>;
+    expect(args).toEqual(expectedArgs);
+    expect(args).not.toHaveProperty('user_id');
+    expect(args).not.toHaveProperty('is_active');
   });
 
   it('does not mutate the input object', async () => {
-    const { client } = mockSaverClient({
-      insert: { data: sampleGoal, error: null },
-    });
+    const { client } = mockSaverClient({ data: sampleGoal, error: null });
     const input = { ...sampleInput };
 
     await saveMacroGoal(client, input);
@@ -134,25 +137,8 @@ describe('saveMacroGoal', () => {
     expect(input).not.toHaveProperty('is_active');
   });
 
-  it('throws a clear error when deactivation fails', async () => {
-    const { client } = mockSaverClient({
-      deactivateError: postgrestError,
-      insert: { data: null, error: null },
-    });
-
-    const error = await saveMacroGoal(client, sampleInput).catch(
-      (caught: Error) => caught,
-    );
-
-    expect(error).toBeInstanceOf(Error);
-    expect((error as Error).message).toContain('deactivate');
-    expect((error as Error).message).not.toContain(RAW_DETAIL);
-  });
-
-  it('throws a clear error when the insert fails', async () => {
-    const { client } = mockSaverClient({
-      insert: { data: null, error: postgrestError },
-    });
+  it('throws a clear error that does not leak Postgrest internals', async () => {
+    const { client } = mockSaverClient({ data: null, error: postgrestError });
 
     const error = await saveMacroGoal(client, sampleInput).catch(
       (caught: Error) => caught,
@@ -161,5 +147,18 @@ describe('saveMacroGoal', () => {
     expect(error).toBeInstanceOf(Error);
     expect((error as Error).message).toContain('save the macro goal');
     expect((error as Error).message).not.toContain(RAW_DETAIL);
+    expect((error as Error).message).not.toContain('leak-hint');
+    expect((error as Error).message).not.toContain('permission denied');
+  });
+
+  it('throws a clear error when the RPC returns no row and no error', async () => {
+    const { client } = mockSaverClient({ data: null, error: null });
+
+    const error = await saveMacroGoal(client, sampleInput).catch(
+      (caught: Error) => caught,
+    );
+
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toContain('save the macro goal');
   });
 });
