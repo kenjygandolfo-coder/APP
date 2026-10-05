@@ -1,0 +1,26 @@
+{
+  "project_type": "Vite + React + TypeScript web module (apps/macros-web) in a monorepo; Supabase (Postgres) data layer with hand-written strict Database types",
+  "language": "TypeScript (strict), SQL (Postgres plpgsql)",
+  "build_system": "npm within apps/macros-web; Vite 6 + tsc. node_modules already installed.",
+  "test_framework": "Vitest 2 (jsdom, globals) with @testing-library/react; setup at src/test/setup.ts; v8 coverage with 80% thresholds",
+  "build_command": "cd apps/macros-web && npm run build (tsc && vite build); typecheck via npm run typecheck",
+  "test_command": "cd apps/macros-web && npx vitest run src/features/macro-goals (full suite: npx vitest run)",
+  "verification_instructions": "1) Materialize energy domain from main into src/features/energy/domain (git show main:<path>) so @energy alias resolves. 2) npx vitest run src/features/macro-goals. 3) npm run typecheck. 4) npm run lint. 5) Static-review 0002 SQL. 6) REMOVE src/features/energy/domain before finishing so it never enters a commit.",
+  "snapshot_or_generated_files": "coverage/ is generated (gitignored). database.types.ts is hand-written (not generated here) and must be kept in sync with migrations by hand.",
+  "setup_instructions": "Node v20/v22 via nvm. node_modules present. No install needed. Energy domain must be temporarily materialized from main for the full suite.",
+  "environment_constraints": "No live Supabase DB in sandbox: SQL/RLS/RPC cannot be executed. Validate 0002 statically and document SQL-editor apply steps. The Module-1 energy domain lives on main, not this branch; materialize temporarily and REMOVE before finishing. Do not commit gitignored artifacts (.expo/, dist/, node_modules/, coverage/, test-results/).",
+  "contribution_requirements": "TypeScript strict, NO any. Immutability (never mutate input). No console.log (ESLint no-console). Non-leaky error mapping (raw error only in Error.cause). Conventional commits. Append-only migrations (do NOT edit 0001). Authorization via auth.uid()/RLS, never trust client-passed user_id.",
+  "key_patterns": "Data layer: injected SupabaseClient<Database> param (no module singleton); toClearError(context, error) wraps failures with raw error only in cause. TanStack Query mutation (useSaveMacroGoal) invalidates macroGoalKeys.active(userId). GOAL_TYPES frozen tuple. MacroGoal = macro_goals Row; SaveMacroGoalInput = Omit<Insert,'id'|'created_at'|'updated_at'>.",
+  "relevant_files": [
+    "apps/macros-web/supabase/migrations/0001_init.sql (pattern + schema; append-only)",
+    "apps/macros-web/supabase/migrations/0002_macro_goal_transactional_save.sql (NEW)",
+    "apps/macros-web/src/data/database.types.ts (type the new Function here)",
+    "apps/macros-web/src/features/macro-goals/macroGoals.data.ts (refactor saveMacroGoal to rpc)",
+    "apps/macros-web/src/features/macro-goals/types.ts (MacroGoal, SaveMacroGoalInput — unchanged)",
+    "apps/macros-web/src/features/macro-goals/useSaveMacroGoal.ts (unchanged; signature stable)",
+    "apps/macros-web/src/features/macro-goals/__tests__/macroGoals.data.test.ts (rewrite save suite to mock rpc)",
+    "apps/macros-web/src/features/macro-goals/__tests__/useSaveMacroGoal.test.tsx (stays green; mocks data layer)",
+    "apps/macros-web/src/features/macro-goals/__tests__/saveGoalWiring.integration.test.tsx (stays green; mocks data layer)"
+  ],
+  "directory_structure": "apps/macros-web/src/features/macro-goals holds data layer, hooks, types, queryKeys, and __tests__. apps/macros-web/src/data/database.types.ts holds the strict Database type. apps/macros-web/supabase/migrations holds append-only SQL."
+}
